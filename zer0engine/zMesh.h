@@ -1,3 +1,5 @@
+/* Author: Cornelius Marx
+ */
 #ifndef ZER0_MESH_H
 #define ZER0_MESH_H
 #include "glew/glew.h"
@@ -6,6 +8,9 @@
 #include "zVector2D.h"
 #include "zShader.h"
 #include <cassert>
+#include <fstream>
+#include <vector>
+#include <unordered_map>
 
 namespace zer0{
 	extern const Vector2D QUAD_VERTS[4];
@@ -38,13 +43,15 @@ namespace zer0{
 
 			/**
 			 * Loading wavefront object from file
+			 * @return false on error, true on success
 			 */
-			bool loadOBJFromFile(const char * file);
+			bool loadOBJFromFile(const char * file, unsigned char components = 0xFF);
 
 			/**
 			 * Loading wavefront object from string
+			 * @return false on error, true on success
 			 */
-			bool loadOBJ(const char * obj);
+			bool loadOBJ(const char * obj, unsigned char components = 0xFF);
 
 			/**
 			 * Set vertices to represent the given primitive
@@ -83,6 +90,9 @@ namespace zer0{
 
 
 			GLuint getBuffer(){return _buffer;}
+
+			GLsizei getVertexCount(){return _vertexCount;}
+			GLsizei getElementCount(){return _elementCount;}
 		private:
 			GLuint _buffer;	
 			GLuint _elementBuffer;

@@ -6,7 +6,7 @@
 using namespace zer0;
 
 // init
-void zer0::init(const char * app_name, int argc, char ** argv)
+void zer0::init(const char * app_name)
 {
 	// create singleton framework object
 	Logger::create();
@@ -15,7 +15,7 @@ void zer0::init(const char * app_name, int argc, char ** argv)
 	Config::create();
 
 	// initialize framework
-	Framework::getInstance()->init(app_name, argc, argv);
+	Framework::getInstance()->init(app_name);
 }
 
 // shutdown
@@ -30,43 +30,8 @@ Framework::Framework() : _showFPS(false), _FPSView(NULL), _desiredFPS(60), _meas
 {
 }
 
-void Framework::init(const char * app_name, int argc, char ** argv)
+void Framework::init(const char * app_name)
 {
-	std::string res_path;
-	std::string pref_path;
-	// parsing commandline arguments
-	for(int i = 1; i < argc; i++){
-		if(!strcmp(argv[i], "--res_path")){// set resource path
-			if(i+1 >= argc){
-				INFO("No path given for --res_path!");
-				exit(0);
-			}
-			res_path = argv[i+1];
-			i++;
-		}
-		else if(!strcmp(argv[i], "--pref_path")){// set preference path
-			if(i+1 >= argc){
-				INFO("No path given for --pref_path!");
-				exit(0);
-			}
-			pref_path = argv[i+1];
-			i++;
-		}
-		else if(!strcmp(argv[i], "--show_fps")){
-			_showFPS = true;
-		}
-		else if(!strcmp(argv[i], "--help") ||
-				!strcmp(argv[i], "-h")){	// help
-			INFO(	"arguments:\n"
-					"--res_path <path>    set path to resource folder\n"
-					"--pref_path <path>   set path to preference folder\n"
-					"--show_fps           if set current fps are displayed\n"
-					"\n"
-			);	
-			exit(0);
-		}
-	}
-
 	INFO("\nInitializing framework:");
 	//initialize SDL
 	INFO("-> SDL2");
@@ -121,7 +86,7 @@ bool Framework::createWindow(int window_w, int window_h, int multisamples, bool 
 			"-> multisamples: %d\n"
 			"-> fullscreen:   %d\n"
 			"-> vsync:        %d\n",
-			window_w, window_h, multisamples, fullscreen, vsync);
+			window_w, window_h, multisamples, (int)fullscreen, (int)vsync);
 
 	_windowW = window_w;
 	_windowH = window_h;
@@ -134,6 +99,10 @@ bool Framework::createWindow(int window_w, int window_h, int multisamples, bool 
 	SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 16);
 	SDL_GL_SetAttribute(SDL_GL_BUFFER_SIZE, 32);
 	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+	if(multisamples > 0){
+		SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 1);
+		SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, multisamples);
+	}
 	_mainWindow = SDL_CreateWindow(CONFIG.APP_NAME.c_str(), SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, _windowW, _windowH, sdl_flags);
 		
 	if (_mainWindow == NULL) { //failed to create a window
@@ -208,6 +177,7 @@ bool Framework::createWindow(int window_w, int window_h, int multisamples, bool 
 	//Font::initDefaultFonts("./fonts/Bitstream_Regular.ttf", "./fonts/Bitstream_Bold.ttf");
 
 	// initialize default shaders
+	INFO("-> Compiling default shader.\n");
 	Shader::initDefaultShaders();
 
 	// create FPS text view
@@ -217,6 +187,10 @@ bool Framework::createWindow(int window_w, int window_h, int multisamples, bool 
 	_FPSView->setAlignment(1, -1, 5);
 	_FPSView->setColor(Color::GREEN);
 	*/
+
+	if(multisamples > 0){
+		glEnable(GL_MULTISAMPLE);
+	}
 
 	// set initial render mode
 	setRenderMode(RenderMode::WORLD_3D);
@@ -233,6 +207,8 @@ void Framework::run(Application * app)
 	_frameCount = 0;
 	_measuredFPS = 0;
 	Uint32 last_ticks = SDL_GetTicks();
+	// trigger initial resize event
+	app->eventWindowResized(_windowW, _windowH);
 	while(1){
 		last_ticks = SDL_GetTicks();
 		// processing events

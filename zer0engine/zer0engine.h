@@ -6,5 +6,6 @@
 #include "zLogger.h"
 #include "zMesh.h"
 #include "zTextView.h"
+#include "zCamera.h"
 
 #endif

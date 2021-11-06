@@ -1,3 +1,5 @@
+/* Author: Cornelius Marx
+ */
 #ifndef ZER0_LOGGER_H
 #define ZER0_LOGGER_H
 
@@ -63,7 +65,7 @@ namespace zer0{
 
 		/*** friends ***/
 		// init and shutdown are declared as friends in order to provide access to the private singleton object
-		friend void init(const char * app_name, int argc, char ** argv);
+		friend void init(const char * app_name);
 		friend void shutdown();
 	private:
 		/* close external log file if it was opened on createLog()

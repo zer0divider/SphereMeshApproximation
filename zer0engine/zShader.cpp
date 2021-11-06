@@ -3,7 +3,7 @@
 using namespace zer0;
 
 Shader* Shader::_current = NULL;
-Shader Shader::DefaultShader("Texture-Shader");
+Shader Shader::DefaultShader("Default-Shader");
 Shader Shader::TextShader("Text-Shader");
 
 GLint Shader::getLocation(const char * name, bool is_uniform)
@@ -32,7 +32,6 @@ bool Shader::initDefaultShaders()
 	static const char* VERTEX_SHADER_SOURCE =
 		"#version 120\n"
 		"attribute vec3 vertex;\n"
-		"attribute vec2 uv;\n"
 		"attribute vec4 color;\n"
 		"varying vec4 out_color;\n"
 		"uniform mat4 projMat;\n"
@@ -47,7 +46,6 @@ bool Shader::initDefaultShaders()
 	static const char* FRAGMENT_SHADER_SOURCE =
 		"#version 120\n"
 		"varying vec4 out_color;\n"
-		"uniform sampler2D tex;\n"
 		"void main()\n"
 		"{\n"
 		"	vec4 tex_color = out_color;\n"

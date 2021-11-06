@@ -1,3 +1,5 @@
+/* Author: Cornelius Marx
+ */
 #include "zMesh.h"
 
 using namespace zer0;
@@ -237,3 +239,260 @@ const Vector3D zer0::CUBE_NORMALS[6] = {
 	Vector3D(0, 1, 0),
 	Vector3D(0, -1, 0)
 };
+
+bool Mesh::loadOBJFromFile(const char * file, unsigned char components)
+{
+	// loading whole file
+	std::ifstream f;
+	f.open(file);
+	if(!f.good()){
+		ERROR("Unable to open file '%s'.", file);
+		return false;
+	}
+	f.seekg(0, f.end);
+	size_t length = f.tellg();
+	f.seekg(0, f.beg);
+	if(!f.good()){
+		ERROR("While reading file '%s'.", file);
+		return false;
+	}
+
+	char * buffer = new char[length+1];
+	f.read(buffer, length);
+	f.close();
+	buffer[length] = '\0';
+	bool r = loadOBJ(buffer, components);
+	delete[] buffer;
+
+	return r;
+}
+
+bool Mesh::loadOBJ(const char * obj, unsigned char components)
+{
+	free();
+	#define SKIP_WHITESPACE(L, I) while(L[I] == ' ' || L[I] == '\t'){I++;}
+	#define SKIP_NUMBER(L, I) while(L[I] >= '0' && L[I] <= '9'){I++;}
+	#define OBJ_ERROR(X, ...) ERROR(("Object file line %d: " X), line_number, ##__VA_ARGS__)
+
+	// line buffer
+	static const int LINE_BUFFER_SIZE = 256;
+	static char line[LINE_BUFFER_SIZE];
+	static char face_strings[4][LINE_BUFFER_SIZE];
+	std::vector<Vector3D> verts;
+	std::vector<Vector3D> normals;
+	std::vector<Vector2D> uvs;
+	
+	// combined verts/normals
+	std::vector<Vector3D> comb_verts;
+	std::vector<Vector3D> comb_normals;
+	std::vector<Vector2D> comb_uvs;
+	std::vector<unsigned int> element_indicies;
+	typedef std::unordered_map<std::string, unsigned int>::value_type face_verts_value_t;
+	std::unordered_map<std::string, unsigned int> face_verts;
+	bool object_found = false;
+	Vector2D v2;
+	Vector3D v3;
+	int line_number = 1;
+	bool error = false;
+	int num_exp_components = 0;
+	int read_components = 0;
+	bool first_face = true;
+	while(*obj != '\0'){
+		// get next line
+		int count = 0;
+		while(*obj != '\n' && *obj != '\r' && *obj != '\0'){
+			if(count < LINE_BUFFER_SIZE-1){
+				line[count++] = *obj;
+			}
+			obj++;
+		}
+		while(*obj == '\n' || *obj == '\r'){obj++;}
+		line[count] = '\0';
+
+		// go to first symbol not whitespace
+		int i = 0;
+		SKIP_WHITESPACE(line, i);
+		// only start parsing if object (o) already found
+		if(object_found){
+			if(line[i] == 'v'){
+				int j = i+1;
+				error = false;
+				char m = line[j];
+				j++;
+				SKIP_WHITESPACE(line, j);
+
+				// parse coordinate
+				switch(m){
+				case 't':{// uv coordinate
+					num_exp_components = 2;
+					if((read_components = sscanf(&line[j], "%f %f", &v2.x, &v2.y)) != 2){
+						error = true;
+					}
+					else{
+						uvs.push_back(v2);
+					}
+				}break;
+				case 'n':{// normal
+					num_exp_components = 3;
+					if((read_components = sscanf(&line[j], "%f %f %f", &v3.x, &v3.y, &v3.z)) != 3){
+						error = true;
+					}
+					else{
+						normals.push_back(v3);
+					}
+				}break;
+				default:{// assume vertex
+					num_exp_components = 3;
+					if((read_components = sscanf(&line[j], "%f %f %f", &v3.x, &v3.y, &v3.z)) != 3){
+						error = true;
+					}
+					else{
+						verts.push_back(v3);
+					}
+				}
+				}
+				if(error){
+					OBJ_ERROR("Expected %d coordinate components, but only got %d.",
+							num_exp_components, read_components);
+					break;
+				}
+			}
+			else if(line[i] == 'f'){// face
+				int j = i+1;
+				SKIP_WHITESPACE(line, j);
+				if((read_components = sscanf(&line[j], "%s %s %s %s", face_strings[0], face_strings[1], face_strings[2], face_strings[3])) != 3){
+					OBJ_ERROR("Expected %d index groups for face, but only got %d.", 3, read_components);
+					error = true;
+					break;
+				}
+				else{
+					for(int fi = 0; fi < 3; fi++){
+						int k = 0;
+						GLubyte flags = 0;
+						int v_index = 0, n_index = 0, u_index = 0;
+						v_index = atoi(&face_strings[fi][k]);
+						SKIP_NUMBER(face_strings[fi], k);
+						if(face_strings[fi][k] == '/'){
+							k++;
+							if(face_strings[fi][k] == '/'){
+								k++;
+								n_index = atoi(&face_strings[fi][k]);
+								flags |= NORMAL;
+								SKIP_NUMBER(face_strings[fi], k);
+							}
+							else{
+								u_index = atoi(&face_strings[fi][k]);	
+								flags |= UV;
+								SKIP_NUMBER(face_strings[fi], k);
+								if(face_strings[fi][k] == '/'){
+									k++;
+									n_index = atoi(&face_strings[fi][k]);
+									flags |= NORMAL;
+									SKIP_NUMBER(face_strings[fi], k);
+								}
+							}
+						}
+						if(first_face){// check what this face consists of
+							first_face = false;
+							_flags = flags;
+						}
+						else if(_flags != flags){
+							OBJ_ERROR("Unexpected change in provided indicies.");
+							error = true;
+							break;
+						}
+						// adjust by one (obj indicies start from 1)
+						v_index -=1;	
+						n_index -=1;
+						u_index -=1;	
+						// try inserting
+						auto ret = face_verts.insert(face_verts_value_t(std::string(face_strings[fi]), comb_verts.size()));
+						if(ret.second){// new element
+							if(v_index < 0 || v_index >= verts.size()){
+								OBJ_ERROR("Vertex index %d out of bounds.", v_index+1);
+								error = true;
+								break;
+							}
+							else if((_flags & NORMAL) && (n_index < 0 || n_index >= normals.size())){
+								OBJ_ERROR("Normal index %d out of bounds.", n_index+1);
+								error = true;
+								break;
+							}
+							else if((_flags & UV) && (u_index < 0 || u_index >= uvs.size())){
+								OBJ_ERROR("UV index %d out of bounds.", u_index+1);
+								error = true;
+								break;
+							}
+							else{
+								element_indicies.push_back(comb_verts.size());
+								comb_verts.push_back(verts[v_index]);
+								if(_flags & NORMAL){
+									comb_normals.push_back(normals[n_index]);
+								}
+								if(_flags & UV){
+									comb_uvs.push_back(uvs[u_index]);
+								}
+							}
+						}
+						else{// already there
+							element_indicies.push_back(ret.first->second);
+						}
+					}
+					if(error){
+						break;
+					}
+				}
+			}
+		}
+
+		if(line[i] == 'o'){
+			if(object_found){
+				WARNING("Multiple object definitions found (o) in obj file, ignoring other.");
+				break;
+			}
+			object_found = true;
+		}
+		// ignore all other stuff
+		line_number++;
+	}
+
+	if(!error){
+		_flags &= components;
+		// set element buffer
+		_elementCount = element_indicies.size();
+		_elementType = GL_UNSIGNED_INT;
+		glGenBuffers(1, &_elementBuffer);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, _elementBuffer);
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned int)*_elementCount, element_indicies.data(), GL_STATIC_DRAW);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+		
+		glGenBuffers(1, &_buffer);
+		glBindBuffer(GL_ARRAY_BUFFER, _buffer);
+		int single_vertex_size = 3;
+		if(_flags & NORMAL){
+			single_vertex_size += 3;
+		}
+		if(_flags & UV){
+			single_vertex_size += 2;
+		}
+		_vertexCount = comb_verts.size();
+		glBufferData(GL_ARRAY_BUFFER, sizeof(float)*single_vertex_size*_vertexCount, 0, GL_STATIC_DRAW);
+		int offset = 0;
+		glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(float)*3*_vertexCount, comb_verts.data());
+		offset += 3*_vertexCount;
+		if(_flags & NORMAL){
+			glBufferSubData(GL_ARRAY_BUFFER, sizeof(float)*offset, sizeof(float)*3*_vertexCount, comb_normals.data());
+			assert(comb_normals.size() == _vertexCount);
+			offset += 3*_vertexCount;
+		}
+		if(_flags & UV){
+			glBufferSubData(GL_ARRAY_BUFFER, sizeof(float)*offset, sizeof(float)*2*_vertexCount, comb_uvs.data());
+			assert(comb_uvs.size() == _vertexCount);
+		}
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+		_drawMode = GL_TRIANGLES;
+		_numDimensions = 3;
+	}
+
+	return !error;
+}

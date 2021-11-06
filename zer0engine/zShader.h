@@ -33,7 +33,11 @@ namespace zer0{
 		/**
 		 * Destructor
 		 */
-		virtual ~Shader(){glDeleteProgram(_program);}
+		virtual ~Shader(){
+			if(_program != 0){
+				glDeleteProgram(_program);
+			}
+		}
 
 		/**
 		 * compile shader program from source of different shader stages

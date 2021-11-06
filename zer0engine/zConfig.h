@@ -1,3 +1,5 @@
+/* Author: Cornelius Marx
+ */
 #ifndef ZER0_CONFIG_H
 #define ZER0_CONFIG_H
 #include "zSingleton.h"
@@ -23,7 +25,7 @@ namespace zer0{
 
 		friend class Framework;
 
-		friend void init(const char * app_name, int argc, char ** argv);// see declaration in zFramework.cpp
+		friend void init(const char * app_name);// see declaration in zFramework.cpp
 	private:
 		ConfigAttributes _config;
 	};

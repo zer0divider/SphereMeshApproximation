@@ -20,6 +20,8 @@ set(ENGINE_SOURCES
 	zLogger.h
 	zQuaternion.h
 	zQuaternion.cpp
+	zCamera.h
+	zCamera.cpp
 	zVector4D.h
 	zVector3D.cpp
 	zVector3D.h

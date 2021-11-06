@@ -17,9 +17,6 @@
 /* singleton access */
 #define FW Framework::getInstance()
 
-#define ZER0_SHADER_PATH_PREFIX "shader/gl3.3/"
-#define ZER0_SHADER_2_1_PATH_PREFIX "shader/gl2.1/"
-
 #define ZER0_FRAME_MEASURE_INTERVAL 1000 //ms
 
 namespace zer0{
@@ -28,9 +25,8 @@ namespace zer0{
 	/**
 	 * Initializes the engine. This function must be called before using any other.
 	 * Creates singleton objects and initializes logger class.
-	 * @param argc, argv arguments passed to main function
 	 */
-	void init(const char * app_name, int argc, char ** argv);
+	void init(const char * app_name);
 
 	/**
 	 * Shuts down framework. Releases all memory allocated by engine and quits SDL.
@@ -144,13 +140,13 @@ namespace zer0{
 	
 			/*** friends ***/
 			// init and shutdown are declared as friends in order to provide access to the private singleton object
-			friend void init(const char * app_name, int argc, char ** argv);
+			friend void init(const char * app_name);
 			friend void shutdown();
 		private:
 			/* intialize SDL and program paths 
 			 * called by init()
 			 */
-			void init(const char* app_name, int argc, char ** argv);
+			void init(const char* app_name);
 
 			GLbitfield _clearMask;
 			int _windowW;

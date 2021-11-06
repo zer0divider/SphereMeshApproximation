@@ -13,6 +13,10 @@ set(PROJECT_SOURCES
 	main.cpp
 	ModelViewer.cpp
 	ModelViewer.h
+	CmdParser.h
+	CmdParser.cpp
+	DiffuseShader.h
+	DiffuseShader.cpp
 )
 
 include_directories(
