@@ -25,6 +25,15 @@ namespace zer0{
 			void set(float new_x, float new_y, float new_z)
 			{x = new_x; y = new_y; z = new_z;}
 
+			// cross product
+			static Vector3D cross(const Vector3D & a, const Vector3D & b){
+				return Vector3D(
+					a.y * b.z - a.z * b.y,
+					a.z * b.x - a.x * b.z,
+					a.x * b.y - a.y * b.x
+				);
+			}
+
 			//calculations
 			void normalize();
 			Vector3D getNormalized() const;

@@ -20,12 +20,16 @@ ModelViewer::ModelViewer():
 	_meshFillColor(MESH_FILL_COLOR),
 	_meshLineColor(MESH_LINE_COLOR)
 {
+}
+
+bool ModelViewer::init(const std::string & model_file)
+{
+	_modelFilename = model_file;
 	// opengl configuration
 	Color bg_color(BACKGROUND_COLOR);
 	glClearColor(bg_color.r, bg_color.g, bg_color.b, bg_color.a);
 	glLineWidth(LINE_WIDTH);
 	glCullFace(GL_BACK);
-
 	// initialize shader
 	INFO("-> Compiling Diffuse Shader");
 	_meshShader.init();
@@ -33,14 +37,24 @@ ModelViewer::ModelViewer():
 	_meshShader.setLightDir(Vector3D(1.0, 1.5, 1.3).getNormalized());
 
 	// loading test obj
-	if(_mesh.loadOBJFromFile("data/hand.obj")){
-		INFO("Object loaded:");
+	std::vector<Vector3D> vertex_data;
+	std::vector<unsigned int> index_data;
+	INFO("Loading mesh from '%s'...", _modelFilename.c_str());
+	if(_mesh.loadOBJFromFile(_modelFilename.c_str(), Mesh::NORMAL, &vertex_data, &index_data)){
 		INFO("  -> #verticies: %d", _mesh.getVertexCount());
 		INFO("  -> #triangles: %d", _mesh.getElementCount()/3);
 		INFO(" ");
 	}
+	else{
+		return false;
+	}
 
+	_dynamicMesh.set(vertex_data, index_data);
+
+	// set initial draw mode
 	setDrawMode(FILL_AND_LINE);
+
+	return true;
 }
 
 ModelViewer::~ModelViewer()
@@ -128,7 +142,7 @@ void ModelViewer::setDrawMode(DrawMode mode)
 	_currentDrawMode = mode;
 	switch(mode){
 	case FILL:{
-		glEnable(GL_CULL_FACE);
+		glDisable(GL_CULL_FACE);
 		_meshShader.setLightMode(DiffuseShader::MATCAP);
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	}break;
@@ -138,7 +152,7 @@ void ModelViewer::setDrawMode(DrawMode mode)
 		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 	}break;
 	case FILL_AND_LINE:{
-		glEnable(GL_CULL_FACE);
+		glDisable(GL_CULL_FACE);
 		_meshShader.setLightMode(DiffuseShader::UNSHADED);
 	}break;
 	}

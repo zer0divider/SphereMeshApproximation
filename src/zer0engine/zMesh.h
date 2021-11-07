@@ -43,15 +43,29 @@ namespace zer0{
 
 			/**
 			 * Loading wavefront object from file
+			 * @param filename .obj file to load
+			 * @param components what components (e.g. NORMAL, UV) to load if available in file
+			 * @param verticies see loadOBJ()
+			 * @param indicies see loadOBJ()
 			 * @return false on error, true on success
 			 */
-			bool loadOBJFromFile(const char * file, unsigned char components = 0xFF);
+			bool loadOBJFromFile(const char * filename, 
+							unsigned char components = 0xFF,
+							std::vector<Vector3D> * verticies = nullptr,
+							std::vector<unsigned int> * indicies = nullptr);
 
 			/**
 			 * Loading wavefront object from string
+			 * @param obj 0 terminated string describing the object in Wavefront format (https://en.wikipedia.org/wiki/Wavefront_.obj_file)
+			 * @param components what components (e.g. NORMAL, UV) to load if available in file
+			 * @param verticies if not nullptr vertex data is put into this vector
+			 * @param indicies if not nullptr index data (element buffer) is put into this vector
 			 * @return false on error, true on success
 			 */
-			bool loadOBJ(const char * obj, unsigned char components = 0xFF);
+			bool loadOBJ(const char * obj, 
+							unsigned char components = 0xFF,
+							std::vector<Vector3D> * verticies = nullptr,
+							std::vector<unsigned int> * indicies = nullptr);
 
 			/**
 			 * Set vertices to represent the given primitive
@@ -87,6 +101,7 @@ namespace zer0{
 			 */
 			static void generateCircleData(float radius, Vector3D * v, int segments, const Vector3D & center = Vector3D_zer0);
 			static void generateCircleData(float radius, Vector2D * v, int segments, const Vector2D & center = Vector2D_zer0);
+
 
 
 			GLuint getBuffer(){return _buffer;}

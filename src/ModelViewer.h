@@ -5,10 +5,14 @@
 
 #include "zer0engine/zer0engine.h"
 #include "DiffuseShader.h"
+#include "DynamicMesh.h"
 
 class ModelViewer : public zer0::Application{
 public:
 	enum DrawMode{FILL, LINE, FILL_AND_LINE, NUM_DRAW_MODES};
+
+	/* initialize */
+	bool init(const std::string & model_file);
 
 	ModelViewer();
 	~ModelViewer();
@@ -24,6 +28,8 @@ private:
 	void setDrawMode(DrawMode mode);
 
 	zer0::Mesh _mesh;
+	std::string _modelFilename;
+	DynamicMesh _dynamicMesh;
 	zer0::Camera _camera;
 	zer0::Color _meshFillColor;
 	zer0::Color _meshLineColor;

@@ -10,6 +10,7 @@
 #include "zMatrix4.h"
 #include <string>
 #include "zConfig.h"
+#include <errno.h>
 
 /* macro for getting current shader */
 #define SHADER Shader::getCurrent()

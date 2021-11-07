@@ -291,13 +291,13 @@ namespace zer0{
 			e->_prev->_next = e->_next;
 		}
 		else{
-			_first = e->next;
+			_first = e->_next;
 		}
 		if(e->_next != NULL){
 			e->_next->_prev = e->_prev;
 		}
 		else{
-			_last = e->prev;
+			_last = e->_prev;
 		}
 
 		delete e;

@@ -240,20 +240,23 @@ const Vector3D zer0::CUBE_NORMALS[6] = {
 	Vector3D(0, -1, 0)
 };
 
-bool Mesh::loadOBJFromFile(const char * file, unsigned char components)
+bool Mesh::loadOBJFromFile(const char * filename, 
+							unsigned char components,
+							std::vector<Vector3D> * verticies,
+							std::vector<unsigned int> * indicies)
 {
 	// loading whole file
 	std::ifstream f;
-	f.open(file);
+	f.open(filename);
 	if(!f.good()){
-		ERROR("Unable to open file '%s'.", file);
+		ERROR("Unable to open file '%s'.", filename);
 		return false;
 	}
 	f.seekg(0, f.end);
 	size_t length = f.tellg();
 	f.seekg(0, f.beg);
 	if(!f.good()){
-		ERROR("While reading file '%s'.", file);
+		ERROR("While reading file '%s'.", filename);
 		return false;
 	}
 
@@ -261,13 +264,16 @@ bool Mesh::loadOBJFromFile(const char * file, unsigned char components)
 	f.read(buffer, length);
 	f.close();
 	buffer[length] = '\0';
-	bool r = loadOBJ(buffer, components);
+	bool r = loadOBJ(buffer, components, verticies, indicies);
 	delete[] buffer;
 
 	return r;
 }
 
-bool Mesh::loadOBJ(const char * obj, unsigned char components)
+bool Mesh::loadOBJ(const char * obj, 
+				unsigned char components,
+				std::vector<Vector3D> * verticies,
+				std::vector<unsigned int> * indicies)
 {
 	free();
 	#define SKIP_WHITESPACE(L, I) while(L[I] == ' ' || L[I] == '\t'){I++;}
@@ -283,10 +289,16 @@ bool Mesh::loadOBJ(const char * obj, unsigned char components)
 	std::vector<Vector2D> uvs;
 	
 	// combined verts/normals
-	std::vector<Vector3D> comb_verts;
+	std::vector<Vector3D> * comb_verts = verticies;
 	std::vector<Vector3D> comb_normals;
 	std::vector<Vector2D> comb_uvs;
-	std::vector<unsigned int> element_indicies;
+	std::vector<unsigned int> *element_indicies = indicies;
+	if(indicies == nullptr){
+		element_indicies = new std::vector<unsigned int>();
+	}
+	if(verticies == nullptr){
+		comb_verts = new std::vector<Vector3D>();
+	}
 	typedef std::unordered_map<std::string, unsigned int>::value_type face_verts_value_t;
 	std::unordered_map<std::string, unsigned int> face_verts;
 	bool object_found = false;
@@ -406,7 +418,7 @@ bool Mesh::loadOBJ(const char * obj, unsigned char components)
 						n_index -=1;
 						u_index -=1;	
 						// try inserting
-						auto ret = face_verts.insert(face_verts_value_t(std::string(face_strings[fi]), comb_verts.size()));
+						auto ret = face_verts.insert(face_verts_value_t(std::string(face_strings[fi]), comb_verts->size()));
 						if(ret.second){// new element
 							if(v_index < 0 || v_index >= verts.size()){
 								OBJ_ERROR("Vertex index %d out of bounds.", v_index+1);
@@ -424,8 +436,8 @@ bool Mesh::loadOBJ(const char * obj, unsigned char components)
 								break;
 							}
 							else{
-								element_indicies.push_back(comb_verts.size());
-								comb_verts.push_back(verts[v_index]);
+								element_indicies->push_back(comb_verts->size());
+								comb_verts->push_back(verts[v_index]);
 								if(_flags & NORMAL){
 									comb_normals.push_back(normals[n_index]);
 								}
@@ -435,7 +447,7 @@ bool Mesh::loadOBJ(const char * obj, unsigned char components)
 							}
 						}
 						else{// already there
-							element_indicies.push_back(ret.first->second);
+							element_indicies->push_back(ret.first->second);
 						}
 					}
 					if(error){
@@ -459,11 +471,11 @@ bool Mesh::loadOBJ(const char * obj, unsigned char components)
 	if(!error){
 		_flags &= components;
 		// set element buffer
-		_elementCount = element_indicies.size();
+		_elementCount = element_indicies->size();
 		_elementType = GL_UNSIGNED_INT;
 		glGenBuffers(1, &_elementBuffer);
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, _elementBuffer);
-		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned int)*_elementCount, element_indicies.data(), GL_STATIC_DRAW);
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned int)*_elementCount, element_indicies->data(), GL_STATIC_DRAW);
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 		
 		glGenBuffers(1, &_buffer);
@@ -475,10 +487,10 @@ bool Mesh::loadOBJ(const char * obj, unsigned char components)
 		if(_flags & UV){
 			single_vertex_size += 2;
 		}
-		_vertexCount = comb_verts.size();
+		_vertexCount = comb_verts->size();
 		glBufferData(GL_ARRAY_BUFFER, sizeof(float)*single_vertex_size*_vertexCount, 0, GL_STATIC_DRAW);
 		int offset = 0;
-		glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(float)*3*_vertexCount, comb_verts.data());
+		glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(float)*3*_vertexCount, comb_verts->data());
 		offset += 3*_vertexCount;
 		if(_flags & NORMAL){
 			glBufferSubData(GL_ARRAY_BUFFER, sizeof(float)*offset, sizeof(float)*3*_vertexCount, comb_normals.data());
@@ -494,5 +506,12 @@ bool Mesh::loadOBJ(const char * obj, unsigned char components)
 		_numDimensions = 3;
 	}
 
+	if(indicies == nullptr){
+		delete element_indicies;
+	}
+
+	if(verticies == nullptr){
+		delete comb_verts;
+	}
 	return !error;
 }

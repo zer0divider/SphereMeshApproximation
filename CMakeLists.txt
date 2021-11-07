@@ -1,14 +1,15 @@
-cmake_minimum_required(VERSION 3.8)
+cmake_minimum_required(VERSION 3.12)
 set(CMAKE_CXX_STANDARD 11)
 project(sphere_mesh)
 
-add_subdirectory(zer0engine/)
+add_subdirectory(src/zer0engine/)
 
 cmake_policy(SET CMP0072 NEW)
 find_package(SDL2 REQUIRED)
 find_package(OpenGL REQUIRED)
 find_package(Freetype REQUIRED)
 
+set(SOURCE_FOLDER src)
 set(PROJECT_SOURCES
 	main.cpp
 	ModelViewer.cpp
@@ -17,14 +18,25 @@ set(PROJECT_SOURCES
 	CmdParser.cpp
 	DiffuseShader.h
 	DiffuseShader.cpp
+	DynamicMesh.h
+	DynamicMesh.cpp
+	BackReferenceList.h
 )
 
+# add source folder prefix
+set(PROJECT_SOURCES_FULL_PATH "")
+foreach(i ${PROJECT_SOURCES})
+	LIST(APPEND PROJECT_SOURCES_FULL_PATH "${SOURCE_FOLDER}/${i}")
+endforeach(i)
+
+# include directories
 include_directories(
 	${OPENGL_INCLUDE_DIRS}
 	${SDL2_INCLUDE_DIRS}
 	${FREETYPE_INCLUDE_DIRS}
 )
 
+# specify link libraries
 set(LIBRARIES
 	${SDL2_LIBRARIES}
 	${OPENGL_LIBRARIES}
@@ -32,7 +44,7 @@ set(LIBRARIES
 )
 
 # executable
-add_executable(${CMAKE_PROJECT_NAME} ${PROJECT_SOURCES} ${MIDDLE_SOURCES}
+add_executable(${CMAKE_PROJECT_NAME} ${PROJECT_SOURCES_FULL_PATH} ${MIDDLE_SOURCES}
 				 ${RESOURCE_GENERATED_LIST_FILE})
 
 # set link libraries

@@ -4,6 +4,7 @@
 #include "ModelViewer.h"
 #include "CmdParser.h"
 
+
 int main(int argc, char ** argv){
 
 	/* parsing commandline arguments */
@@ -38,6 +39,12 @@ int main(int argc, char ** argv){
 		600
 	);
 
+	auto cmd_model = cmd.addArg<std::string>(
+		"obj", 'o',
+		".obj model to load from file.",
+		"data/cube.obj"
+	);
+
 	cmd.addHelp();
 	CmdParser::Result r = cmd.parse(argc, argv);
 	if(r == CmdParser::HELP){
@@ -65,7 +72,12 @@ int main(int argc, char ** argv){
 
 	/* creating and run main application */
 	ModelViewer * app = new ModelViewer();
-	zer0::FW->run(app);
+	if(app->init(cmd_model->getValue())){
+		zer0::FW->run(app);
+	}
+	else{
+		zer0::ERROR("Application initialization failed!");
+	}
 
 	/* cleanup */
 	delete(app);

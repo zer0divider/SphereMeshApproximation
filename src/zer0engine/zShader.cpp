@@ -156,6 +156,7 @@ bool Shader::loadFromFile(	const char * vertex,
 
 	FILE * f;
 	// open each file one after another and reading whole content into sources
+	bool error = false;
 	for(int i = 0; i < NUM_FILES; i++){
 		if(files[i] == NULL)continue;
 		f = fopen(files[i], "r");
@@ -168,15 +169,23 @@ bool Shader::loadFromFile(	const char * vertex,
 		long int file_size = ftell(f);
 		sources[i] = new char[file_size+1];
 		fseek(f, 0, SEEK_SET);
-		fread(sources[i], 1, file_size, f);
+		if(fread(sources[i], 1, file_size, f) < file_size)
+		{
+			ERROR("Error while reading shader from file '%s': %s", files[i], strerror(errno));
+			fclose(f);
+			error = true;
+			break;
+		}
 		sources[i][file_size] = '\0';
 		fclose(f);
 	}
 	
 	// compile from sources
-	bool ret_value = load(sources[0], sources[1]);
+	if(!error){
+		bool ret_value = load(sources[0], sources[1]);
+	}
 	for(int i = 0; i < NUM_FILES; i++)
 		delete[] sources[i];
 	
-	return ret_value;
+	return !error;
 }
