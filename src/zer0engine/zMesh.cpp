@@ -144,6 +144,8 @@ void Mesh::free()
 	glDeleteBuffers(1, &_buffer);
 	glDeleteBuffers(1, &_elementBuffer);
 	_buffer=0;
+	_vertexCount = 0;
+	_elementCount = 0;
 	_elementBuffer=0;
 }
 
@@ -183,6 +185,28 @@ void Mesh::draw()
 	else{
 		glDrawElements(_drawMode, _elementCount, _elementType, 0);
 	}
+}
+
+void Mesh::set3D(const float * data, size_t num_verts, unsigned char components, GLenum draw_mode)
+{
+	// common mistake: passing GL_LINE instead of GL_LINES
+	assert(draw_mode != GL_LINE);
+	free();
+	_drawMode = draw_mode;
+	_flags = components;
+	_vertexCount = num_verts;
+	_numDimensions = 3;
+	glGenBuffers(1, &_buffer);
+	glBindBuffer(GL_ARRAY_BUFFER, _buffer);
+	int num_floats_per_vertex = 3;
+	if(_flags & NORMAL){
+		num_floats_per_vertex += 3;
+	}
+	if(_flags & UV){
+		num_floats_per_vertex += 2;
+	}
+	glBufferData(GL_ARRAY_BUFFER, sizeof(float)*num_floats_per_vertex*num_verts, data, GL_STATIC_DRAW);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
 /*** constants ***/
@@ -284,21 +308,19 @@ bool Mesh::loadOBJ(const char * obj,
 	static const int LINE_BUFFER_SIZE = 256;
 	static char line[LINE_BUFFER_SIZE];
 	static char face_strings[4][LINE_BUFFER_SIZE];
-	std::vector<Vector3D> verts;
+	std::vector<Vector3D> * verts = verticies;
+	if(verts == nullptr){
+		verts = new std::vector<Vector3D>();
+	}
+
 	std::vector<Vector3D> normals;
 	std::vector<Vector2D> uvs;
 	
 	// combined verts/normals
-	std::vector<Vector3D> * comb_verts = verticies;
+	std::vector<Vector3D> comb_verts;
 	std::vector<Vector3D> comb_normals;
 	std::vector<Vector2D> comb_uvs;
-	std::vector<unsigned int> *element_indicies = indicies;
-	if(indicies == nullptr){
-		element_indicies = new std::vector<unsigned int>();
-	}
-	if(verticies == nullptr){
-		comb_verts = new std::vector<Vector3D>();
-	}
+	std::vector<unsigned int> element_indicies;
 	typedef std::unordered_map<std::string, unsigned int>::value_type face_verts_value_t;
 	std::unordered_map<std::string, unsigned int> face_verts;
 	bool object_found = false;
@@ -359,7 +381,7 @@ bool Mesh::loadOBJ(const char * obj,
 						error = true;
 					}
 					else{
-						verts.push_back(v3);
+						verts->push_back(v3);
 					}
 				}
 				}
@@ -417,10 +439,13 @@ bool Mesh::loadOBJ(const char * obj,
 						v_index -=1;	
 						n_index -=1;
 						u_index -=1;	
+						if(indicies != nullptr){
+							indicies->push_back(v_index);
+						}
 						// try inserting
-						auto ret = face_verts.insert(face_verts_value_t(std::string(face_strings[fi]), comb_verts->size()));
+						auto ret = face_verts.insert(face_verts_value_t(std::string(face_strings[fi]), comb_verts.size()));
 						if(ret.second){// new element
-							if(v_index < 0 || v_index >= verts.size()){
+							if(v_index < 0 || v_index >= verts->size()){
 								OBJ_ERROR("Vertex index %d out of bounds.", v_index+1);
 								error = true;
 								break;
@@ -436,8 +461,8 @@ bool Mesh::loadOBJ(const char * obj,
 								break;
 							}
 							else{
-								element_indicies->push_back(comb_verts->size());
-								comb_verts->push_back(verts[v_index]);
+								element_indicies.push_back(comb_verts.size());
+								comb_verts.push_back((*verts)[v_index]);
 								if(_flags & NORMAL){
 									comb_normals.push_back(normals[n_index]);
 								}
@@ -447,7 +472,7 @@ bool Mesh::loadOBJ(const char * obj,
 							}
 						}
 						else{// already there
-							element_indicies->push_back(ret.first->second);
+							element_indicies.push_back(ret.first->second);
 						}
 					}
 					if(error){
@@ -471,11 +496,11 @@ bool Mesh::loadOBJ(const char * obj,
 	if(!error){
 		_flags &= components;
 		// set element buffer
-		_elementCount = element_indicies->size();
+		_elementCount = element_indicies.size();
 		_elementType = GL_UNSIGNED_INT;
 		glGenBuffers(1, &_elementBuffer);
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, _elementBuffer);
-		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned int)*_elementCount, element_indicies->data(), GL_STATIC_DRAW);
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned int)*_elementCount, element_indicies.data(), GL_STATIC_DRAW);
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 		
 		glGenBuffers(1, &_buffer);
@@ -487,10 +512,10 @@ bool Mesh::loadOBJ(const char * obj,
 		if(_flags & UV){
 			single_vertex_size += 2;
 		}
-		_vertexCount = comb_verts->size();
+		_vertexCount = comb_verts.size();
 		glBufferData(GL_ARRAY_BUFFER, sizeof(float)*single_vertex_size*_vertexCount, 0, GL_STATIC_DRAW);
 		int offset = 0;
-		glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(float)*3*_vertexCount, comb_verts->data());
+		glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(float)*3*_vertexCount, comb_verts.data());
 		offset += 3*_vertexCount;
 		if(_flags & NORMAL){
 			glBufferSubData(GL_ARRAY_BUFFER, sizeof(float)*offset, sizeof(float)*3*_vertexCount, comb_normals.data());
@@ -506,12 +531,9 @@ bool Mesh::loadOBJ(const char * obj,
 		_numDimensions = 3;
 	}
 
-	if(indicies == nullptr){
-		delete element_indicies;
+	if(verticies == nullptr){// no vertex list given, created locally so delete now
+		delete verts;
 	}
 
-	if(verticies == nullptr){
-		delete comb_verts;
-	}
 	return !error;
 }

@@ -29,7 +29,7 @@ namespace zer0{
 			/**
 			 * vertex components 
 			 */
-			enum Components{NORMAL=0x01, UV=0x02, COLOR=0x04};
+			enum Components{ONLY_POSITION=0x0, NORMAL=0x01, UV=0x02, COLOR=0x04};
 
 			/**
 			 * Constructor
@@ -75,6 +75,12 @@ namespace zer0{
 			 * @param smooth If set to true: smooth normal generation for rounded meshes
 			 */
 			void loadPrimitive(Primitive type, const Vector3D & dim, int segments = 32, bool smooth = false);
+
+			/**
+			 * set from 3D vertex data
+			 * the data is thightly packed position/normal/uv data depending on what components are specified
+			 */
+			void set3D(const float * data, size_t num_verts, unsigned char components, GLenum draw_mode);
 
 			/**
 			 * Free gl buffers

@@ -7,7 +7,8 @@
 #include "DiffuseShader.h"
 #include "DynamicMesh.h"
 
-class ModelViewer : public zer0::Application{
+class ModelViewer : public zer0::Application
+{
 public:
 	enum DrawMode{FILL, LINE, FILL_AND_LINE, NUM_DRAW_MODES};
 
@@ -28,6 +29,7 @@ private:
 	void setDrawMode(DrawMode mode);
 
 	zer0::Mesh _mesh;
+	zer0::Mesh _selectedSimplex;
 	std::string _modelFilename;
 	DynamicMesh _dynamicMesh;
 	zer0::Camera _camera;

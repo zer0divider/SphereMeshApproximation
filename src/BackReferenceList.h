@@ -22,10 +22,10 @@ public:
 		const T* get()const{return (T*)this;}
 
 		T* getNext(){return (T*)_next;}
-		const T* next()const{return (T*)_next;}
+		const T* getNext()const{return (T*)_next;}
 
 		T* getPrev(){return (T*)_prev;}
-		const T* prev()const{return (T*)_prev;}
+		const T* getPrev()const{return (T*)_prev;}
 
 		static T* __ITEM_INHERITANCE_GUARD__;
 	friend class BackReferenceList;
@@ -126,6 +126,10 @@ public:
 
 	const T* getLast()const{
 		return (T*)_last;
+	}
+
+	size_t getSize()const{
+		return _size;
 	}
 
 private:

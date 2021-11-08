@@ -16,7 +16,6 @@ enum class CmdArgType{INT, FLOAT, BOOL, STRING};
 class CmdArgBase
 {
 public:
-	enum Option{NONE=0x0, IS_FILE=0x1, IS_HELP=0x2, REQUIRED=0x4};
 	const std::string& getDescription()const{return _description;}
 	CmdArgType getType()const{return _type;}
 	unsigned int getOptions()const{return _options;}
@@ -33,6 +32,7 @@ protected:
 	CmdArgBase(CmdArgType t):_type(t){}
 };
 
+
 template<typename T>
 class CmdArg : CmdArgBase{
 public:
@@ -48,6 +48,7 @@ private:
 
 class CmdParser{
 public:
+	enum Option{NONE=0x0, IS_FILE=0x1, IS_HELP=0x2, REQUIRED=0x4};
 	CmdParser(){}
 	~CmdParser();
 

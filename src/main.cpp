@@ -42,7 +42,8 @@ int main(int argc, char ** argv){
 	auto cmd_model = cmd.addArg<std::string>(
 		"obj", 'o',
 		".obj model to load from file.",
-		"data/cube.obj"
+		"data/cube.obj",
+		CmdParser::IS_FILE
 	);
 
 	cmd.addHelp();

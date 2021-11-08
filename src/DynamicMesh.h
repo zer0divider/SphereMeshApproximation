@@ -27,7 +27,7 @@ public:
 	{
 		Vertex(){}
 		~Vertex()override{zer0::INFO("Vertex removed: %s", toString().c_str());}
-		Vertex(const zer0::Vector3D & _position): position(_position){}
+		Vertex(const zer0::Vector3D & _position): position(_position){zer0::INFO("Vertex created: %s", toString().c_str());}
 
 		/**
 		 * returns the edge in the edges-set that the given other vertex is part of
@@ -45,9 +45,7 @@ public:
 		zer0::Vector3D position;
 		std::set<Edge*> edges; // edges to connected verticies
 
-		std::string toString(){
-			return "(" + std::to_string(position.x) + ", " + std::to_string(position.y) + ", " + std::to_string(position.z) + ")";
-		}
+		std::string toString()const;
 	};
 
 	/**
@@ -55,7 +53,8 @@ public:
 	 */
 	struct Face : public BackReferenceList<Face>::Item
 	{
-		Face(Vertex * _v0, Vertex * _v1, Vertex * _v2):v{_v0, _v1, _v2}{calculateNormal();}
+		Face(Vertex * _v0, Vertex * _v1, Vertex * _v2):v{_v0, _v1, _v2}{calculateNormal();
+			zer0::INFO("Face created: v0%s v1%s v2%s", v[0]->toString().c_str(), v[1]->toString().c_str(), v[2]->toString().c_str());}
 		~Face()override{
 			zer0::INFO("Face removed: v0%s v1%s v2%s", v[0]->toString().c_str(), v[1]->toString().c_str(), v[2]->toString().c_str());}
 		Vertex * v[3];
@@ -70,6 +69,9 @@ public:
 		/* calculate normal from all 3 vertex points, ordered CCW
 		 */
 		void calculateNormal();
+		std::string toString()const {
+			return "( v0" + v[0]->toString() + ", v1" + v[1]->toString() + ", v2" + v[2]->toString() + ")";
+		}
 	};
 
 	/**
@@ -77,7 +79,8 @@ public:
 	 */
 	struct Edge : public BackReferenceList<Edge>::Item
 	{
-		Edge(Vertex * _v0, Vertex * _v1): v{_v0, _v1}{}
+		Edge(Vertex * _v0, Vertex * _v1): v{_v0, _v1}{
+			zer0::INFO("Edge created: (v0%s v1%s)", v[0]->toString().c_str(), v[1]->toString().c_str());}
 		~Edge()override{
 			zer0::INFO("Edge removed: v0%s v1%s", v[0]->toString().c_str(), v[1]->toString().c_str());}
 		Vertex* v[2]; // two verticies form an edge
@@ -110,6 +113,10 @@ public:
 			return vertex == v[0] || vertex == v[1];
 		}
 
+		std::string toString()const {
+			return "( v0" + v[0]->toString() + ", v1" + v[1]->toString() + ")";
+		}
+
 		/**
 		 * all faces that share this edge,
 		 * NOTE: for most geometry there will be at most 2 faces that share the same edge
@@ -140,6 +147,10 @@ public:
 	 */
 	void upload(zer0::Mesh & m);
 
+	void getEdgeMesh(zer0::Mesh & m, const Edge * e)const;
+	void getFaceMesh(zer0::Mesh & m, const Face * f)const;
+	void getVertexMesh(zer0::Mesh & m, const Face * f)const;
+
 	void edgeCollapse(Edge * e, const zer0::Vector3D& new_position);
 
 	void edgeCollapseToCenter(Edge * e){
@@ -150,6 +161,12 @@ public:
 	 * remove all verticies, faces and edges
 	 */
 	void clear();
+
+	void debug_print();
+
+	BackReferenceList<Vertex>& getVertexList(){return _vertexList;}
+	BackReferenceList<Face>& getFaceList(){return _faceList;}
+	BackReferenceList<Edge>& getEdgeList(){return _edgeList;}
 private:
 	BackReferenceList<Vertex> _vertexList;
 	BackReferenceList<Face> _faceList;

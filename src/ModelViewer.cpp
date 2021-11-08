@@ -50,6 +50,11 @@ bool ModelViewer::init(const std::string & model_file)
 	}
 
 	_dynamicMesh.set(vertex_data, index_data);
+	DynamicMesh::Edge * e = _dynamicMesh.getEdgeList().getFirst();
+	_dynamicMesh.getEdgeMesh(_selectedSimplex, e);
+	_dynamicMesh.debug_print();
+	_dynamicMesh.edgeCollapseToCenter(e);
+	_dynamicMesh.debug_print();
 
 	// set initial draw mode
 	setDrawMode(FILL_AND_LINE);
@@ -79,14 +84,22 @@ void ModelViewer::drawMesh()
 	_mesh.bind();
 	switch(_currentDrawMode){
 	case FILL:{
+		glDisable(GL_CULL_FACE);
+		_meshShader.setLightMode(DiffuseShader::MATCAP);
+		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 		SHADER->setColor(_meshFillColor);
 		_mesh.draw();
 	}break;
 	case LINE:{
+		glDisable(GL_CULL_FACE);
+		_meshShader.setLightMode(DiffuseShader::UNSHADED);
+		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 		SHADER->setColor(_meshLineColor);
 		_mesh.draw();
 	}break;
 	case FILL_AND_LINE:{
+		glDisable(GL_CULL_FACE);
+		_meshShader.setLightMode(DiffuseShader::UNSHADED);
 		// draw fill
 		SHADER->setColor(_meshFillColor);
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
@@ -100,6 +113,13 @@ void ModelViewer::drawMesh()
 		_meshShader.setNormalOffset(0);
 	}break;
 	}
+
+	// draw selected simplex
+	_meshShader.setLightMode(DiffuseShader::UNSHADED);
+	SHADER->setColor(Color::RED);
+	glClear(GL_DEPTH_BUFFER_BIT);
+	_selectedSimplex.bind();
+	_selectedSimplex.draw();
 }
 
 void ModelViewer::eventKeyboard(SDL_Keycode key, bool pressed, int repeat)
@@ -140,22 +160,6 @@ void ModelViewer::eventWindowResized(int new_width, int new_height)
 void ModelViewer::setDrawMode(DrawMode mode)
 {
 	_currentDrawMode = mode;
-	switch(mode){
-	case FILL:{
-		glDisable(GL_CULL_FACE);
-		_meshShader.setLightMode(DiffuseShader::MATCAP);
-		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-	}break;
-	case LINE:{
-		glDisable(GL_CULL_FACE);
-		_meshShader.setLightMode(DiffuseShader::UNSHADED);
-		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-	}break;
-	case FILL_AND_LINE:{
-		glDisable(GL_CULL_FACE);
-		_meshShader.setLightMode(DiffuseShader::UNSHADED);
-	}break;
-	}
 }
 
 bool ModelViewer::update()

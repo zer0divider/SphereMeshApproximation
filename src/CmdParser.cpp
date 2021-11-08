@@ -9,7 +9,7 @@ CmdParser::~CmdParser()
 
 void CmdParser::addHelp()
 {
-	addArg<bool>("help", 'h', "Show help.", false, CmdArgBase::IS_HELP);
+	addArg<bool>("help", 'h', "Show help.", false, CmdParser::IS_HELP);
 }
 
 void CmdParser::addArgBase(CmdArgBase* base, const std::string& full_arg, char single_letter_arg,
@@ -85,7 +85,7 @@ CmdParser::Result CmdParser::parse(int argc, char ** argv)
 				assert(false);
 			}
 			}
-			if(base->getOptions()&CmdArgBase::IS_HELP){
+			if(base->getOptions()& IS_HELP){
 				return HELP;
 			}
 		}
@@ -126,7 +126,7 @@ std::string CmdParser::getHelpString()
 			type = "<float>";
 		}break;
 		case CmdArgType::STRING:{
-			if(i->getOptions() & CmdArgBase::IS_FILE){
+			if(i->getOptions() & IS_FILE){
 				type = "<file>";
 			}
 			else{
