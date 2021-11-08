@@ -46,6 +46,7 @@ public:
 		std::set<Edge*> edges; // edges to connected verticies
 
 		std::string toString()const;
+		size_t id; // id when verticies are moved to normal array
 	};
 
 	/**

@@ -166,7 +166,34 @@ void DynamicMesh::set(const std::vector<Vector3D> & verticies, const std::vector
 
 void DynamicMesh::upload(zer0::Mesh & m)
 {
+	// assign a unique id to every Vertex and store their positions in an array
+	const size_t num_verts = _vertexList.getSize();
+	Vector3D * verts = new Vector3D[num_verts];
+	int i = 0;
+	for(Vertex * v = _vertexList.getFirst(); v != nullptr; v = v->getNext()){
+		v->id = i;
+		verts[i] = v->position;
+		i++;
+	}
+	
+	// iterate all faces and store vertex indicies
+	const size_t num_indicies = 3*_faceList.getSize();
+	unsigned int * indicies = new unsigned int[num_indicies];
+	i = 0;
+	for(Face * f = _faceList.getFirst(); f != nullptr; f = f->getNext()){
+		for(int fi =0; fi < 3; fi++){
+			indicies[i] = f->v[fi]->id;
+			i++;
+		}
+	}
 
+	m.set3DIndexed(
+		(float*)verts, num_verts,
+		indicies, num_indicies,
+		Mesh::ONLY_POSITION, GL_TRIANGLES);
+
+	delete[] indicies;
+	delete[] verts;
 }
 
 void DynamicMesh::edgeCollapse(Edge * e, const Vector3D& new_position)

@@ -209,6 +209,17 @@ void Mesh::set3D(const float * data, size_t num_verts, unsigned char components,
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
+void Mesh::set3DIndexed(const float * vertex_data, size_t num_verts, const unsigned int * index_data, size_t num_indicies, unsigned char components, GLenum draw_mode)
+{
+	set3D(vertex_data, num_verts, components, draw_mode);
+	_elementCount = num_indicies;
+	_elementType = GL_UNSIGNED_INT;
+	glGenBuffers(1, &_elementBuffer);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, _elementBuffer);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned int)*num_indicies, index_data, GL_STATIC_DRAW);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+}
+
 /*** constants ***/
 const Vector2D zer0::QUAD_VERTS[4] ={
 	Vector2D(-1, -1),

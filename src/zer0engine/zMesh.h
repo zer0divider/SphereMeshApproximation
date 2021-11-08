@@ -83,6 +83,12 @@ namespace zer0{
 			void set3D(const float * data, size_t num_verts, unsigned char components, GLenum draw_mode);
 
 			/**
+			 * set from indexed 3D vertex data (uses element buffer)
+			 * @param vertex_data is the same as param data in set3D()
+			 */
+			void set3DIndexed(const float * vertex_data, size_t num_verts, const unsigned int * index_data, size_t num_indicies, unsigned char components, GLenum draw_mode);
+
+			/**
 			 * Free gl buffers
 			 */
 			void free();

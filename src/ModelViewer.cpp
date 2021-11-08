@@ -50,11 +50,11 @@ bool ModelViewer::init(const std::string & model_file)
 	}
 
 	_dynamicMesh.set(vertex_data, index_data);
-	DynamicMesh::Edge * e = _dynamicMesh.getEdgeList().getFirst();
-	_dynamicMesh.getEdgeMesh(_selectedSimplex, e);
+	_markingEdge = _dynamicMesh.getEdgeList().getFirst();
+	_dynamicMesh.getEdgeMesh(_selectedSimplex, _markingEdge);
 	_dynamicMesh.debug_print();
-	_dynamicMesh.edgeCollapseToCenter(e);
-	_dynamicMesh.debug_print();
+
+	_dynamicMesh.upload(_mesh);
 
 	// set initial draw mode
 	setDrawMode(FILL_AND_LINE);
@@ -132,6 +132,17 @@ void ModelViewer::eventKeyboard(SDL_Keycode key, bool pressed, int repeat)
 				m = (DrawMode)0;
 			}
 			setDrawMode(m);
+		}break;
+		case SDLK_e:{
+			if(_markingEdge != nullptr){
+				_dynamicMesh.edgeCollapseToCenter(_markingEdge);
+				_dynamicMesh.debug_print();
+				_dynamicMesh.upload(_mesh);
+				_markingEdge = _dynamicMesh.getEdgeList().getFirst();
+				if(_markingEdge != nullptr){
+					_dynamicMesh.getEdgeMesh(_selectedSimplex, _markingEdge);
+				}
+			}
 		}break;
 		}
 	}

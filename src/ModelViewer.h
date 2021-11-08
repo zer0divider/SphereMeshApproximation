@@ -32,6 +32,7 @@ private:
 	zer0::Mesh _selectedSimplex;
 	std::string _modelFilename;
 	DynamicMesh _dynamicMesh;
+	DynamicMesh::Edge *  _markingEdge;
 	zer0::Camera _camera;
 	zer0::Color _meshFillColor;
 	zer0::Color _meshLineColor;
