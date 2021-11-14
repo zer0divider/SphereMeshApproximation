@@ -39,7 +39,7 @@ namespace zer0{
 			/**
 			 * Destructor
 			 */
-			~Mesh(){free();};
+			~Mesh(){clear();};
 
 			/**
 			 * Loading wavefront object from file
@@ -91,7 +91,7 @@ namespace zer0{
 			/**
 			 * Free gl buffers
 			 */
-			void free();
+			void clear();
 
 			/**
 			 * Binding buffer to vertex attribute locations and setting pointers.

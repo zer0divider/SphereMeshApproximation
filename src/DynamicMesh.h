@@ -26,14 +26,14 @@ public:
 	struct Vertex : public BackReferenceList<Vertex>::Item
 	{
 		Vertex(){}
-		~Vertex()override{zer0::INFO("Vertex removed: %s", toString().c_str());}
-		Vertex(const zer0::Vector3D & _position): position(_position){zer0::INFO("Vertex created: %s", toString().c_str());}
+		~Vertex()override{}
+		Vertex(const zer0::Vector3D & _position): position(_position){}
 
 		/**
 		 * returns the edge in the edges-set that the given other vertex is part of
 		 * if there is no such edge, then nullptr is returned
 		 */
-		Edge* getEdgeWithOther(Vertex * other){
+		Edge* getEdgeWithOther(const Vertex * other){
 			for(Edge* e : edges){
 				if(e->hasVertex(other)){
 					return e;
@@ -54,18 +54,50 @@ public:
 	 */
 	struct Face : public BackReferenceList<Face>::Item
 	{
-		Face(Vertex * _v0, Vertex * _v1, Vertex * _v2):v{_v0, _v1, _v2}{calculateNormal();
-			zer0::INFO("Face created: v0%s v1%s v2%s", v[0]->toString().c_str(), v[1]->toString().c_str(), v[2]->toString().c_str());}
-		~Face()override{
-			zer0::INFO("Face removed: v0%s v1%s v2%s", v[0]->toString().c_str(), v[1]->toString().c_str(), v[2]->toString().c_str());}
+		Face(Vertex * _v0, Vertex * _v1, Vertex * _v2):v{_v0, _v1, _v2}{calculateNormal();}
+		~Face()override{}
 		Vertex * v[3];
 		zer0::Vector3D normal;
+
+		/**
+		 * set the local element in v to new_vertex that matches given this_vertex
+		 * NOTE: if given vertex is not part of this edge, this is a nop
+		 */
+		void setThisVertex(Vertex *this_vertex, Vertex * new_vertex)
+		{
+			if(this_vertex == v[0]){
+				v[0] = new_vertex;
+			}else if(this_vertex == v[1]){
+				v[1] = new_vertex;
+			}else if(this_vertex == v[2]){
+				v[2] = new_vertex;
+			}
+		}
+
+		/**
+		 * returns true if vertex is part of this face
+		 */
+		bool hasVertex(const Vertex * vertex)const{
+			return vertex == v[0] || vertex == v[1] || vertex == v[2];
+		}
+
+		/**
+		 * returns the edge that both faces share, or nullptr if no such edge
+		 */
+		Edge* getSharedEdgeWith(Face * f);
+
+		/**
+		 * remove this face from edge's face lists
+		 */
+		void removeThisFromEdges();
 
 		/**
 		 * get the other vertex that is neither of the given ones
 		 * NOTE: this assumes that the given verticies are part of the face
 		 */
-		Vertex* getOtherVertex(Vertex * not_this_one, Vertex * and_not_this_one);
+		Vertex* getOtherVertex(const Vertex * not_this_one, const Vertex * and_not_this_one);
+
+		const Vertex* getOtherVertex(const Vertex * not_this_one, const Vertex * and_not_this_one)const;
 
 		/* calculate normal from all 3 vertex points, ordered CCW
 		 */
@@ -80,43 +112,49 @@ public:
 	 */
 	struct Edge : public BackReferenceList<Edge>::Item
 	{
-		Edge(Vertex * _v0, Vertex * _v1): v{_v0, _v1}{
-			zer0::INFO("Edge created: (v0%s v1%s)", v[0]->toString().c_str(), v[1]->toString().c_str());}
-		~Edge()override{
-			zer0::INFO("Edge removed: v0%s v1%s", v[0]->toString().c_str(), v[1]->toString().c_str());}
+		Edge(Vertex * _v0, Vertex * _v1): v{_v0, _v1}{}
+		~Edge()override{}
 		Vertex* v[2]; // two verticies form an edge
 		
 		/**
 		 * get the other vertex that is not the given
 		 * NOTE: this assumes that the given vertex is part of the edge
 		 */
-		Vertex* getOtherVertex(Vertex *not_this_one){
+		Vertex* getOtherVertex(const Vertex *not_this_one){
 			return not_this_one == v[0] ? v[1]: v[0];
 		}
 
 		/**
-		 * set the local element in v to new_vertex that matches given vertex
+		 * set the local element in v to new_vertex that matches given this_vertex
 		 * NOTE: if given vertex is not part of this edge, this is a nop
 		 */
-		void setThisVertex(Vertex *vertex, Vertex * new_vertex){
-			if(vertex == v[0]){
+		void setThisVertex(Vertex *this_vertex, Vertex * new_vertex){
+			if(this_vertex == v[0]){
 				v[0] = new_vertex;
 			}
-			else if(vertex == v[1]){
+			else if(this_vertex == v[1]){
 				v[1] = new_vertex;
 			}
 		}
 
+
 		/**
 		 * return true if given vertex is part of this edge
 		 */
-		bool hasVertex(Vertex * vertex)const{
+		bool hasVertex(const Vertex * vertex)const{
 			return vertex == v[0] || vertex == v[1];
 		}
 
 		std::string toString()const {
 			return "( v0" + v[0]->toString() + ", v1" + v[1]->toString() + ")";
 		}
+		
+		/**
+		 * set given mesh to a line mesh that represents this edge
+		 */
+		void upload(zer0::Mesh & m)const;
+
+		void uploadFaces(zer0::Mesh & m)const;
 
 		/**
 		 * all faces that share this edge,
@@ -164,6 +202,8 @@ public:
 	void clear();
 
 	void debug_print();
+
+	void integrity_check();
 
 	BackReferenceList<Vertex>& getVertexList(){return _vertexList;}
 	BackReferenceList<Face>& getFaceList(){return _faceList;}

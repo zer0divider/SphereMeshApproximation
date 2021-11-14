@@ -6,7 +6,7 @@ using namespace zer0;
 
 void Mesh::loadPrimitive(Primitive p, const Vector3D & dim, int segments, bool smooth)
 {
-	free();
+	clear();
 	float * verticies = NULL;
 	GLsizeiptr total_vertex_size = 0;
 	_vertexCount = 0;
@@ -139,7 +139,7 @@ void Mesh::generateCircleData(float radius, Vector2D * v, int segments, const Ve
 	}
 }
 
-void Mesh::free()
+void Mesh::clear()
 {
 	glDeleteBuffers(1, &_buffer);
 	glDeleteBuffers(1, &_elementBuffer);
@@ -191,7 +191,7 @@ void Mesh::set3D(const float * data, size_t num_verts, unsigned char components,
 {
 	// common mistake: passing GL_LINE instead of GL_LINES
 	assert(draw_mode != GL_LINE);
-	free();
+	clear();
 	_drawMode = draw_mode;
 	_flags = components;
 	_vertexCount = num_verts;
@@ -310,7 +310,7 @@ bool Mesh::loadOBJ(const char * obj,
 				std::vector<Vector3D> * verticies,
 				std::vector<unsigned int> * indicies)
 {
-	free();
+	clear();
 	#define SKIP_WHITESPACE(L, I) while(L[I] == ' ' || L[I] == '\t'){I++;}
 	#define SKIP_NUMBER(L, I) while(L[I] >= '0' && L[I] <= '9'){I++;}
 	#define OBJ_ERROR(X, ...) ERROR(("Object file line %d: " X), line_number, ##__VA_ARGS__)
@@ -397,7 +397,7 @@ bool Mesh::loadOBJ(const char * obj,
 				}
 				}
 				if(error){
-					OBJ_ERROR("Expected %d coordinate components, but only got %d.",
+					OBJ_ERROR("Expected %d coordinate components, but got %d.",
 							num_exp_components, read_components);
 					break;
 				}

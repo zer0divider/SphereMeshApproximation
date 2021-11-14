@@ -1,6 +1,6 @@
 # cmake build type, set to Debug or Release
 TYPE?=Debug
-LOAD_OBJ?="./data/non_manifold.obj"
+LOAD_OBJ?="./data/tri.obj"
 
 CMAKE_FLAGS=-DCMAKE_BUILD_TYPE=$(TYPE)
 all:

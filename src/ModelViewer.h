@@ -27,12 +27,14 @@ public:
 private:
 	void drawMesh();
 	void setDrawMode(DrawMode mode);
+	void selectEdge(DynamicMesh::Edge * e);
 
 	zer0::Mesh _mesh;
-	zer0::Mesh _selectedSimplex;
+	zer0::Mesh _selectedEdgeMesh;
+	zer0::Mesh _selectedEdgeFacesMesh;
 	std::string _modelFilename;
 	DynamicMesh _dynamicMesh;
-	DynamicMesh::Edge *  _markingEdge;
+	DynamicMesh::Edge *  _selectedEdge;
 	zer0::Camera _camera;
 	zer0::Color _meshFillColor;
 	zer0::Color _meshLineColor;

@@ -50,9 +50,7 @@ bool ModelViewer::init(const std::string & model_file)
 	}
 
 	_dynamicMesh.set(vertex_data, index_data);
-	_markingEdge = _dynamicMesh.getEdgeList().getFirst();
-	_dynamicMesh.getEdgeMesh(_selectedSimplex, _markingEdge);
-	_dynamicMesh.debug_print();
+	selectEdge(_dynamicMesh.getEdgeList().getFirst());
 
 	_dynamicMesh.upload(_mesh);
 
@@ -82,6 +80,7 @@ void ModelViewer::drawMesh()
 	SHADER->setModelMatrix(m);
 	
 	_mesh.bind();
+	glLineWidth(LINE_WIDTH);
 	switch(_currentDrawMode){
 	case FILL:{
 		glDisable(GL_CULL_FACE);
@@ -114,12 +113,22 @@ void ModelViewer::drawMesh()
 	}break;
 	}
 
-	// draw selected simplex
+	glClear(GL_DEPTH_BUFFER_BIT);
 	_meshShader.setLightMode(DiffuseShader::UNSHADED);
+	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
+	// draw faces of selected edge
+	SHADER->setColor(Color::GREEN);
+	_selectedEdgeFacesMesh.bind();
+	_selectedEdgeFacesMesh.draw();
+
+	// draw selected edge
+	glLineWidth(4);
 	SHADER->setColor(Color::RED);
 	glClear(GL_DEPTH_BUFFER_BIT);
-	_selectedSimplex.bind();
-	_selectedSimplex.draw();
+	_selectedEdgeMesh.bind();
+	_selectedEdgeMesh.draw();
+
 }
 
 void ModelViewer::eventKeyboard(SDL_Keycode key, bool pressed, int repeat)
@@ -134,17 +143,44 @@ void ModelViewer::eventKeyboard(SDL_Keycode key, bool pressed, int repeat)
 			setDrawMode(m);
 		}break;
 		case SDLK_e:{
-			if(_markingEdge != nullptr){
-				_dynamicMesh.edgeCollapseToCenter(_markingEdge);
-				_dynamicMesh.debug_print();
-				_dynamicMesh.upload(_mesh);
-				_markingEdge = _dynamicMesh.getEdgeList().getFirst();
-				if(_markingEdge != nullptr){
-					_dynamicMesh.getEdgeMesh(_selectedSimplex, _markingEdge);
+			for(int i = 0; i < 1; i++){
+				if(_selectedEdge != nullptr){
+					_dynamicMesh.edgeCollapseToCenter(_selectedEdge);
+					_selectedEdge = _dynamicMesh.getEdgeList().getFirst();
 				}
+			}
+			_dynamicMesh.upload(_mesh);
+			selectEdge(_selectedEdge);
+		}break;
+		case SDLK_RIGHT:
+		case SDLK_LEFT:{
+			if(_selectedEdge != nullptr){
+				DynamicMesh::Edge * next_edge;
+				if(key == SDLK_RIGHT){
+					next_edge = _selectedEdge->getNext();
+					if(next_edge == nullptr){
+						next_edge = _dynamicMesh.getEdgeList().getFirst();
+					}
+				}
+				else if(key == SDLK_LEFT){
+					next_edge = _selectedEdge->getPrev();
+					if(next_edge == nullptr){
+						next_edge = _dynamicMesh.getEdgeList().getLast();
+					}
+				}
+				selectEdge(next_edge);
 			}
 		}break;
 		}
+	}
+}
+
+void ModelViewer::selectEdge(DynamicMesh::Edge * e)
+{
+	_selectedEdge = e;
+	if(e != nullptr){
+		_selectedEdge->upload(_selectedEdgeMesh);
+		_selectedEdge->uploadFaces(_selectedEdgeFacesMesh);
 	}
 }
 
