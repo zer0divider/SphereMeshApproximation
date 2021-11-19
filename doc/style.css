@@ -1,3 +1,7 @@
+body{
+	font-family: Arial, Helvetica, sans-serif;
+}
+
 canvas {
 	border: 1px solid #555;
 	border-radius: 3px;
@@ -5,4 +9,11 @@ canvas {
 }
 
 .main{
+	width: 100%;
+	text-align: center;
+}
+
+#status{
+	display: inline-block;
+	width: 600px;
 }

@@ -237,7 +237,7 @@ if(canvas.getContext){
 		sphere.draw();
 
 		// draw Q
-		_CTX.fillText("Q = "+currentQ.toFixed(3), 10, _CTX.canvas.height-10);
+		_CTX.fillText("Q(s) = "+currentQ.toFixed(3), 10, _CTX.canvas.height-10);
 	}
 
 	function updateQ(){
