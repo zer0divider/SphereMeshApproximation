@@ -93,6 +93,10 @@ class Plane{
 		this.p = p;
 	}
 
+	getLength(){
+		return this.half_len*2;
+	}
+
 	draw(){
 		_CTX.save();
 		let p_px = vToPx(this.p);
@@ -194,12 +198,13 @@ if(canvas.getContext){
 	let unit_width = _CTX.canvas.width/PIXELS_PER_UNIT;
 	let unit_height = _CTX.canvas.height/PIXELS_PER_UNIT;
 
-	let QHtml = document.getElementById("Q-metric");
 	let RadiusSliderHTML = document.getElementById("sphere-radius-slider");
 	let RadiusHTML = document.getElementById("sphere-radius");
 	let NumPlanesHTML = document.getElementById("plane-number");
+	let PlaneLengthWeightHTML = document.getElementById("plane-length-weight");
 	function getSliderValue(){ return RadiusSliderHTML.value/10; }
 	function setSliderValue(v){ RadiusSliderHTML.value = v*10; }
+	let weigh_plane_length = NumPlanesHTML.value;
 
 	let planes = [];
 	let top_plane_pos = new Vec2(unit_width/2, unit_height/2 - 0.8);
@@ -207,12 +212,18 @@ if(canvas.getContext){
 	planes.push(new Plane(top_plane_pos.add(new Vec2(1.05, 0.55)), new Vec2(1.0, -1.0), 1.5));
 	planes.push(new Plane(top_plane_pos.add(new Vec2(-1.05, 0.55)), new Vec2(-1.0, -1.0), 1.5));
 	planes.push(new Plane(top_plane_pos.add(new Vec2(0, 1.1)), new Vec2(0.0, 1.0), 3.2));
-	let num_planes = 1;
+	let num_planes = NumPlanesHTML.value;
 
 	let sphere = new Sphere(new Vec2(unit_width/2, unit_height/2+0.2), getSliderValue());
 	
-	let color_high_error = new RGBColor(1, 0, 0);
-	let color_low_error = new RGBColor(0, 1, 0);
+	// sphere colors
+	let color_high_error = new RGBColor(0.5, 0, 0);
+	let color_low_error = new RGBColor(0, 0.9, 0.1);
+
+	let currentQ = 0;
+
+	_CTX.font = "24px sans";
+
 	function draw(){
 		// clear canvas
 		_CTX.clearRect(0, 0, _CTX.canvas.width, _CTX.canvas.height);
@@ -224,15 +235,21 @@ if(canvas.getContext){
 
 		// draw sphere
 		sphere.draw();
+
+		// draw Q
+		_CTX.fillText("Q = "+currentQ.toFixed(3), 10, _CTX.canvas.height-10);
 	}
 
 	function updateQ(){
-		let q = 0;
+		currentQ = 0
 		for(let i = 0; i < num_planes; i++){
-			q += sphere.getSquaredDistanceToPlane(planes[i]);
+			let q = sphere.getSquaredDistanceToPlane(planes[i]);
+			if(weigh_plane_length){
+				q *= planes[i].getLength();
+			}
+			currentQ += q;
 		}
-		sphere.setColor(color_low_error.interpolate(color_high_error, q*2));
-		QHtml.innerHTML = q.toFixed(3);
+		sphere.setColor(color_low_error.interpolate(color_high_error, currentQ*2));
 	}
 
 	function updateSliderValue(){
@@ -285,6 +302,12 @@ if(canvas.getContext){
 
 	NumPlanesHTML.addEventListener("change", (evt) =>{
 		num_planes = evt.target.value;
+		updateQ();
+		draw();
+	});
+	PlaneLengthWeightHTML.addEventListener("change", (evt)=>{
+		console.log("change: " + evt.target.checked);
+		weigh_plane_length = evt.target.checked;
 		updateQ();
 		draw();
 	});
