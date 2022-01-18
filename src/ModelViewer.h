@@ -29,7 +29,8 @@ private:
 	void setDrawMode(DrawMode mode);
 	void selectEdge(DynamicMesh::Edge * e);
 
-	zer0::Mesh _mesh;
+	zer0::Mesh _faceMesh;
+	zer0::Mesh _edgeMesh;
 	zer0::Mesh _selectedEdgeMesh;
 	zer0::Mesh _selectedEdgeFacesMesh;
 	std::string _modelFilename;

@@ -13,6 +13,9 @@ run: all
 debug: all
 	gdb --args ./build/sphere_mesh -o $(LOAD_OBJ)
 
+test: all
+	./build/test_prio
+
 clean:
 	rm -r build/
 

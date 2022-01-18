@@ -11,6 +11,15 @@ std::string DynamicMesh::Vertex::toString()const
 		std::to_string(position.z) + ")";
 }
 
+void DynamicMesh::Vertex::getFaces(std::set<Face*> & faces)
+{
+	for(Edge * e: edges){
+		for(Face * f: e->faces){
+			faces.insert(f);
+		}
+	}
+}
+
 void DynamicMesh::Face::calculateNormal()
 {
 	assert(v[0] != nullptr);
@@ -209,7 +218,7 @@ void DynamicMesh::set(const std::vector<Vector3D> & verticies, const std::vector
 	
 }
 
-void DynamicMesh::upload(zer0::Mesh & m)
+void DynamicMesh::upload(zer0::Mesh & face_mesh, zer0::Mesh & edge_mesh)
 {
 	// assign a unique id to every Vertex and store their positions in an array
 	const size_t num_verts = _vertexList.getSize();
@@ -221,24 +230,45 @@ void DynamicMesh::upload(zer0::Mesh & m)
 		i++;
 	}
 	
-	// iterate all faces and store vertex indicies
-	const size_t num_indicies = 3*_faceList.getSize();
-	unsigned int * indicies = new unsigned int[num_indicies];
+	// face mesh
+	// iterate all faces and store vertex indices
+	const size_t num_indices = 3*_faceList.getSize();
+	unsigned int * indices = new unsigned int[num_indices];
 	i = 0;
 	for(Face * f = _faceList.getFirst(); f != nullptr; f = f->getNext()){
 		for(int fi =0; fi < 3; fi++){
-			indicies[i] = f->v[fi]->id;
+			indices[i] = f->v[fi]->id;
 			i++;
 		}
 	}
 
 	// set new verticies in mesh, this removes all normal data
-	m.set3DIndexed(
+	face_mesh.set3DIndexed(
 		(float*)verts, num_verts,
-		indicies, num_indicies,
+		indices, num_indices,
 		Mesh::ONLY_POSITION, GL_TRIANGLES);
+	delete[] indices;
 
-	delete[] indicies;
+	// edge mesh
+	const size_t num_edge_indices = 2*_edgeList.getSize();
+	unsigned int * edge_indices = new unsigned int[num_edge_indices];
+	i = 0;
+	for(Edge * e = _edgeList.getFirst(); e != nullptr; e = e->getNext()){
+		edge_indices[i] = e->v[0]->id;	
+		i++;
+		edge_indices[i] = e->v[1]->id;	
+		i++;
+	}
+
+	edge_mesh.set3DIndexed(
+		(float*)verts,
+		num_verts,
+		edge_indices,
+		num_edge_indices,
+		Mesh::ONLY_POSITION, GL_LINES);
+
+	delete[] edge_indices;
+
 	delete[] verts;
 }
 
@@ -280,7 +310,7 @@ void DynamicMesh::integrity_check()
 	INFO("-> OK.");
 }
 
-void DynamicMesh::edgeCollapse(Edge * e, const Vector3D& new_position)
+void DynamicMesh::edgeCollapse(Edge * e, const zer0::Vector3D& new_position, Vertex ** new_vertex, std::vector<Edge*> * deleted_edges)
 {
 #define STR(V) (V->toString().c_str())
 	/*****************************************************************************************
@@ -408,10 +438,65 @@ void DynamicMesh::Edge::uploadFaces(zer0::Mesh & m)const
 	}
 }
 
-void DynamicMesh::getFaceMesh(zer0::Mesh & m, const Face * f)const
+void DynamicMesh::getEdgeMesh(zer0::Mesh & m, const Edge * e)const
 {
+	ERROR("Not implemented yet!");
+	assert(false);
 }
 
-void DynamicMesh::getVertexMesh(zer0::Mesh & m, const Face * f)const
+void DynamicMesh::getFaceMesh(zer0::Mesh & m, const Face * f)const
 {
+	ERROR("Not implemented yet!");
+	assert(false);
+}
+
+void DynamicMesh::getVertexMesh(zer0::Mesh & m, const Vertex * v)const
+{
+	ERROR("Not implemented yet!");
+	assert(false);
+}
+
+void DynamicMesh::initSQEM()
+{
+	// calculate SQEM for each face
+	for(Face* f = _faceList.getFirst(); f != nullptr; f = f->getNext()){
+		f->Q.setFromPlane<zer0::Vector3D>(f->v[0]->position, f->normal);
+	}
+
+	// calculate SQEM for each vertex based on SQEM of faces
+	for(Vertex* v = _vertexList.getFirst(); v != nullptr; v = v->getNext()){
+		v->Q.setZero();
+		v->sphere_radius = 0.f;
+		// get all faces that contain this vertex
+		std::set<Face*> faces;
+		v->getFaces(faces);
+		for(Face * f: faces){
+			float area = f->getArea();
+			v->Q +=  f->Q * (area/3.f);
+		}
+	}
+
+	// minimize SQEM for each edge (vertex-pair)
+	for(Edge * e = _edgeList.getFirst(); e != nullptr; e = e->getNext()){
+		e->Q = e->v[0]->Q + e->v[1]->Q;
+		e->collapse_cost = e->Q.minimize<zer0::Vector3D, float>(e->sphere_center, e->sphere_radius, e->v[0]->position, e->v[1]->position);
+		_collapseList.push(e);
+	}
+}
+
+void DynamicMesh::sphereApproximation()
+{
+	// assume initSQEM() has been called at this point
+	/////
+
+	// take next best collapse candidate
+	Edge * collapsing_edge = _collapseList.top();
+	_collapseList.pop();
+
+	Vertex * v;
+	std::vector<Edge*> deleted_edges;
+	edgeCollapse(collapsing_edge, collapsing_edge->sphere_center, &v, &deleted_edges);
+
+	// TODO: adjust edgeCollapse Function to return actual deleted_edges and new vertex
+	assert(false);
 }

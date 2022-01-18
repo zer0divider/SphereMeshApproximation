@@ -40,9 +40,9 @@ bool ModelViewer::init(const std::string & model_file)
 	std::vector<Vector3D> vertex_data;
 	std::vector<unsigned int> index_data;
 	INFO("Loading mesh from '%s'...", _modelFilename.c_str());
-	if(_mesh.loadOBJFromFile(_modelFilename.c_str(), Mesh::NORMAL, &vertex_data, &index_data)){
-		INFO("  -> #verticies: %d", _mesh.getVertexCount());
-		INFO("  -> #triangles: %d", _mesh.getElementCount()/3);
+	if(_faceMesh.loadOBJFromFile(_modelFilename.c_str(), Mesh::NORMAL, &vertex_data, &index_data)){
+		INFO("  -> #verticies: %d", _faceMesh.getVertexCount());
+		INFO("  -> #triangles: %d", _faceMesh.getElementCount()/3);
 		INFO(" ");
 	}
 	else{
@@ -52,7 +52,15 @@ bool ModelViewer::init(const std::string & model_file)
 	_dynamicMesh.set(vertex_data, index_data);
 	selectEdge(_dynamicMesh.getEdgeList().getFirst());
 
-	_dynamicMesh.upload(_mesh);
+
+	INFO("Initializing SQEM...");
+	_dynamicMesh.initSQEM();
+	INFO("Done.");
+
+	INFO("Approximating sphere mesh");
+	_dynamicMesh.sphereApproximation();
+
+	_dynamicMesh.upload(_faceMesh, _edgeMesh);
 
 	// set initial draw mode
 	setDrawMode(FILL_AND_LINE);
@@ -79,40 +87,40 @@ void ModelViewer::drawMesh()
 	m.loadIdentity();
 	SHADER->setModelMatrix(m);
 	
-	_mesh.bind();
 	glLineWidth(LINE_WIDTH);
+	glDisable(GL_CULL_FACE);
+	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	switch(_currentDrawMode){
 	case FILL:{
-		glDisable(GL_CULL_FACE);
+		_faceMesh.bind();
 		_meshShader.setLightMode(DiffuseShader::MATCAP);
-		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 		SHADER->setColor(_meshFillColor);
-		_mesh.draw();
+		_faceMesh.draw();
 	}break;
 	case LINE:{
-		glDisable(GL_CULL_FACE);
+		_edgeMesh.bind();
 		_meshShader.setLightMode(DiffuseShader::UNSHADED);
-		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 		SHADER->setColor(_meshLineColor);
-		_mesh.draw();
+		_edgeMesh.draw();
 	}break;
 	case FILL_AND_LINE:{
-		glDisable(GL_CULL_FACE);
+		_faceMesh.bind();
 		_meshShader.setLightMode(DiffuseShader::UNSHADED);
 		// draw fill
 		SHADER->setColor(_meshFillColor);
-		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-		_mesh.draw();
+		_faceMesh.draw();
 
 		// draw line on top
-		_meshShader.setNormalOffset(0.0001);
+		//_meshShader.setNormalOffset(0.0001);
 		SHADER->setColor(_meshLineColor);
-		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-		_mesh.draw();
-		_meshShader.setNormalOffset(0);
+		//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+		_edgeMesh.bind();
+		_edgeMesh.draw();
+		//_meshShader.setNormalOffset(0);
 	}break;
 	}
 
+/*
 	glClear(GL_DEPTH_BUFFER_BIT);
 	_meshShader.setLightMode(DiffuseShader::UNSHADED);
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
@@ -121,6 +129,7 @@ void ModelViewer::drawMesh()
 	SHADER->setColor(Color::GREEN);
 	_selectedEdgeFacesMesh.bind();
 	_selectedEdgeFacesMesh.draw();
+	*/
 
 	// draw selected edge
 	glLineWidth(4);
@@ -149,7 +158,7 @@ void ModelViewer::eventKeyboard(SDL_Keycode key, bool pressed, int repeat)
 					_selectedEdge = _dynamicMesh.getEdgeList().getFirst();
 				}
 			}
-			_dynamicMesh.upload(_mesh);
+			_dynamicMesh.upload(_faceMesh, _edgeMesh);
 			selectEdge(_selectedEdge);
 		}break;
 		case SDLK_RIGHT:

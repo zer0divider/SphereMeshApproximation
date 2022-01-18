@@ -31,6 +31,7 @@ endforeach(i)
 
 # include directories
 include_directories(
+	src/
 	${OPENGL_INCLUDE_DIRS}
 	${SDL2_INCLUDE_DIRS}
 	${FREETYPE_INCLUDE_DIRS}
@@ -44,8 +45,11 @@ set(LIBRARIES
 )
 
 # executable
-add_executable(${CMAKE_PROJECT_NAME} ${PROJECT_SOURCES_FULL_PATH} ${MIDDLE_SOURCES}
-				 ${RESOURCE_GENERATED_LIST_FILE})
+add_executable(${CMAKE_PROJECT_NAME} ${PROJECT_SOURCES_FULL_PATH})
+
+# tests
+add_executable(test_prio tests/test_prio.cpp src/DynamicMesh.cpp )
+target_link_libraries(test_prio zer0engine ${LIBRARIES})
 
 # set link libraries
 target_link_libraries(${CMAKE_PROJECT_NAME} zer0engine ${LIBRARIES})
