@@ -232,6 +232,7 @@ void DynamicMesh::upload(zer0::Mesh & m)
 		}
 	}
 
+	// set new verticies in mesh, this removes all normal data
 	m.set3DIndexed(
 		(float*)verts, num_verts,
 		indicies, num_indicies,

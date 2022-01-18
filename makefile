@@ -1,6 +1,6 @@
 # cmake build type, set to Debug or Release
 TYPE?=Debug
-LOAD_OBJ?="./data/tri.obj"
+LOAD_OBJ?="./data/cube.obj"
 
 CMAKE_FLAGS=-DCMAKE_BUILD_TYPE=$(TYPE)
 all:
