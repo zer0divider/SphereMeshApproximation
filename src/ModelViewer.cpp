@@ -50,15 +50,16 @@ bool ModelViewer::init(const std::string & model_file)
 	}
 
 	_dynamicMesh.set(vertex_data, index_data);
-	selectEdge(_dynamicMesh.getEdgeList().getFirst());
 
 
 	INFO("Initializing SQEM...");
+	Uint32 t = SDL_GetTicks();
 	_dynamicMesh.initSQEM();
+	Uint32 t2 = SDL_GetTicks();
+	INFO("Took %.2f seconds\n", (t2-t)/1000.f);
+	selectEdge(_dynamicMesh.getBestCollapseEdge());
 	INFO("Done.");
 
-	INFO("Approximating sphere mesh");
-	_dynamicMesh.sphereApproximation();
 
 	_dynamicMesh.upload(_faceMesh, _edgeMesh);
 
@@ -151,11 +152,24 @@ void ModelViewer::eventKeyboard(SDL_Keycode key, bool pressed, int repeat)
 			}
 			setDrawMode(m);
 		}break;
-		case SDLK_e:{
-			for(int i = 0; i < 1; i++){
+		case SDLK_e:
+		case SDLK_g:
+		case SDLK_h:
+		case SDLK_f:{
+			int max = 1;
+			if(key == SDLK_f){
+				max = 10000;
+			}
+			else if(key == SDLK_g){
+				max = 1000;
+			}
+			else if(key == SDLK_h){
+				max = 100;
+			}
+			for(int i = 0; i < max; i++){
 				if(_selectedEdge != nullptr){
-					_dynamicMesh.edgeCollapseToCenter(_selectedEdge);
-					_selectedEdge = _dynamicMesh.getEdgeList().getFirst();
+					_dynamicMesh.sphereApproximation();
+					_selectedEdge = _dynamicMesh.getBestCollapseEdge();
 				}
 			}
 			_dynamicMesh.upload(_faceMesh, _edgeMesh);

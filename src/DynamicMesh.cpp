@@ -310,7 +310,7 @@ void DynamicMesh::integrity_check()
 	INFO("-> OK.");
 }
 
-void DynamicMesh::edgeCollapse(Edge * e, const zer0::Vector3D& new_position, Vertex ** new_vertex, std::vector<Edge*> * deleted_edges)
+void DynamicMesh::edgeCollapse(Edge * e, const zer0::Vector3D& new_position, Vertex ** new_vertex, std::vector<Edge*> * removed_edges)
 {
 #define STR(V) (V->toString().c_str())
 	/*****************************************************************************************
@@ -329,7 +329,7 @@ void DynamicMesh::edgeCollapse(Edge * e, const zer0::Vector3D& new_position, Ver
 	assert(v1 != nullptr);
 
 	// remove edge from vertex edge list
-	INFO("collapsing edge %s", STR(e));
+	//INFO("collapsing edge %s", STR(e));
 	//auto r = v0->edges.erase(e);
 	//assert(r == 1);// <-- if this assertion is not fullfilled, something must be wrong with initial setting of edges/verticies
 	//r = v1->edges.erase(e);// this should actually not be necessary, since v1 is going to be removed anyways, but, we want to make sure, that if w iterate over the edges of v1, the collapsing edge is skipped
@@ -388,7 +388,13 @@ void DynamicMesh::edgeCollapse(Edge * e, const zer0::Vector3D& new_position, Ver
 	for(Edge * e_i : edges_to_be_removed){
 		e_i->getOtherVertex(v1)->edges.erase(e_i);
 		v1->edges.erase(e_i);
-		_edgeList.remove(e_i);
+		// store removed edges pointers
+		if(removed_edges != nullptr){
+			removed_edges->push_back(e_i);
+		}
+		else{
+			_edgeList.remove(e_i);
+		}
 	}
 
 	v1->edges.erase(e);
@@ -406,6 +412,9 @@ void DynamicMesh::edgeCollapse(Edge * e, const zer0::Vector3D& new_position, Ver
 
 	// remove collapsing edge from v0
 	v0->edges.erase(e);
+	if(new_vertex != nullptr){
+		*new_vertex = v0;
+	}
 
 	// delete v1
 	_vertexList.remove(v1);
@@ -477,26 +486,54 @@ void DynamicMesh::initSQEM()
 	}
 
 	// minimize SQEM for each edge (vertex-pair)
+	// NOTE: it is much faster to first insert all the edges unordered and then sort the whole list
 	for(Edge * e = _edgeList.getFirst(); e != nullptr; e = e->getNext()){
-		e->Q = e->v[0]->Q + e->v[1]->Q;
-		e->collapse_cost = e->Q.minimize<zer0::Vector3D, float>(e->sphere_center, e->sphere_radius, e->v[0]->position, e->v[1]->position);
-		_collapseList.push(e);
+		e->updateSQEM();
+		e->collapse_list_iterator = _collapseList.insert_end(e);
 	}
+	_collapseList.sort();
 }
 
 void DynamicMesh::sphereApproximation()
 {
 	// assume initSQEM() has been called at this point
 	/////
+	if(_collapseList.empty()){
+		return;
+	}
+	//INFO("Collapse list contains %lu elements.", _collapseList.size());
 
 	// take next best collapse candidate
-	Edge * collapsing_edge = _collapseList.top();
-	_collapseList.pop();
+	Edge * collapsing_edge = _collapseList.front();
+	_collapseList.pop_front();
 
+	SQEM new_q = collapsing_edge->Q;
+	float sphere_radius = collapsing_edge->sphere_radius;
+	if(sphere_radius != 0.f){
+		INFO("sphere radius: %f", sphere_radius);
+	}
 	Vertex * v;
-	std::vector<Edge*> deleted_edges;
-	edgeCollapse(collapsing_edge, collapsing_edge->sphere_center, &v, &deleted_edges);
+	std::vector<Edge*> removed_edges;
+	edgeCollapse(collapsing_edge, collapsing_edge->sphere_center, &v, &removed_edges);
+	//INFO("Removing %lu + 1 edges\n", removed_edges.size());
+	
+	v->Q = new_q;
+	v->sphere_radius = sphere_radius;
+	//INFO("sphere radius: %f", sphere_radius);
 
-	// TODO: adjust edgeCollapse Function to return actual deleted_edges and new vertex
-	assert(false);
+	// remove edges from prio queue
+	std::vector<Edge*>::iterator it = removed_edges.begin();
+	while(it != removed_edges.end()){
+		_collapseList.erase((*it)->collapse_list_iterator);
+		_edgeList.remove(*it);
+		it++;
+	}
+
+	// recalculate and minimize SQEM of edges that have been changed, and reinsert into collapse list
+	for(Edge * e : v->edges){
+		_collapseList.erase(e->collapse_list_iterator);
+		e->updateSQEM();
+		e->collapse_list_iterator = _collapseList.insert(e);
+	}
+	INFO("Collapse list contains %lu elements.", _collapseList.size());
 }

@@ -9,7 +9,7 @@
 #include <assert.h>
 #include "BackReferenceList.h"
 #include "SQEM.h"
-#include <queue>
+#include "PrioList.h"
 
 /**
  * offline mesh format, for quickly applying geometry transformations (e.g. edge collapse)
@@ -22,6 +22,13 @@ public:
 	 */
 	struct Edge;
 	struct Face;
+	struct CollapseCostCompare;
+
+	/* type of priority queue
+	 * NOTE: we do not use a std::prio_queue here because removal of arbitrary elements is not possible
+	 *  we have to live with the fact that inserting in order now takes O(n) time
+	 */
+	typedef PrioList<Edge*, CollapseCostCompare> CollapseListType;
 
 	/**
 	 * vertex that holds a position
@@ -128,7 +135,7 @@ public:
 	 */
 	struct Edge : public BackReferenceList<Edge>::Item
 	{
-		Edge(Vertex * _v0, Vertex * _v1): v{_v0, _v1}{}
+		Edge(Vertex * _v0, Vertex * _v1): v{_v0, _v1} {}
 		~Edge()override{}
 		Vertex* v[2]; // two verticies form an edge
 		
@@ -180,8 +187,16 @@ public:
 		double collapse_cost;
 		float sphere_radius;
 		zer0::Vector3D sphere_center;
-	};
-	struct CollapseCostLess{
+
+		void updateSQEM(){
+			Q = v[0]->Q + v[1]->Q;
+			collapse_cost = Q.minimize<zer0::Vector3D, float>(sphere_center, sphere_radius, v[0]->position, v[1]->position);
+		}
+
+		CollapseListType::iterator collapse_list_iterator; //iterator in collapse list
+	}; // struct Edge
+
+	struct CollapseCostCompare{
 		bool operator()(const Edge * e1, const Edge * e2){
 			return e1->collapse_cost < e2->collapse_cost;
 		}
@@ -214,12 +229,18 @@ public:
 	void getFaceMesh(zer0::Mesh & m, const Face * f)const;
 	void getVertexMesh(zer0::Mesh & m, const Vertex * v)const;
 
+	/* get edge with currently lowest cost
+	 * if no more edges, returns nullptr
+	 */
+	Edge* getBestCollapseEdge(){return _collapseList.empty()? nullptr : _collapseList.front();}
+
 	/**
 	 * collapse edge to new position
 	 * the vertex that remains at the collapsed position is given by new_vertex (if not null)
-	 * The edges that were deleted during the process (dangling pointers!) are returned through deleted_edges (if not null). This does not include the given edge e!
+	 * The edges that were removed during the process are returned through deleted_edges if not nullptr, else the edges are freed from memory. This does not include the given edge e (always freed).
 	 */
-	void edgeCollapse(Edge * e, const zer0::Vector3D& new_position, Vertex ** new_vertex = nullptr, std::vector<Edge*> * deleted_edges = nullptr);
+	void edgeCollapse(Edge * e, const zer0::Vector3D& new_position,
+			Vertex ** new_vertex = nullptr, std::vector<Edge*> * removed_edges = nullptr);
 
 	void edgeCollapseToCenter(Edge * e){
 		edgeCollapse(e, (e->v[0]->position+e->v[1]->position)/2, nullptr, nullptr);
@@ -254,7 +275,7 @@ private:
 	BackReferenceList<Face> _faceList;
 	BackReferenceList<Edge> _edgeList;
 
-	std::priority_queue<Edge*, std::vector<Edge*>, CollapseCostLess> _collapseList; // edge collapses to be considered for mesh approximation, sorted by cost
+	CollapseListType _collapseList; // edge collapses to be considered for mesh approximation, sorted by cost
 };
 
 #endif
