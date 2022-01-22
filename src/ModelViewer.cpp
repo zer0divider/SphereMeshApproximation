@@ -175,6 +175,18 @@ void ModelViewer::eventKeyboard(SDL_Keycode key, bool pressed, int repeat)
 			_dynamicMesh.upload(_faceMesh, _edgeMesh);
 			selectEdge(_selectedEdge);
 		}break;
+		case SDLK_SPACE:{
+		// collapse into single vertex
+			Uint32 t = SDL_GetTicks();
+			while(_dynamicMesh.getVertexList().getSize() > 2)
+			{
+				_dynamicMesh.sphereApproximation();
+				_selectedEdge = _dynamicMesh.getBestCollapseEdge();
+			}
+			_dynamicMesh.upload(_faceMesh, _edgeMesh);
+			selectEdge(_selectedEdge);
+			INFO("Done, took %.f seconds.", (SDL_GetTicks()-t)/1000.f);
+		}break;
 		case SDLK_RIGHT:
 		case SDLK_LEFT:{
 			if(_selectedEdge != nullptr){
@@ -204,6 +216,9 @@ void ModelViewer::selectEdge(DynamicMesh::Edge * e)
 	if(e != nullptr){
 		_selectedEdge->upload(_selectedEdgeMesh);
 		_selectedEdge->uploadFaces(_selectedEdgeFacesMesh);
+	}
+	else{
+		_selectedEdgeMesh.clear();
 	}
 }
 
