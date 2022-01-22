@@ -166,9 +166,31 @@ void DynamicMesh::set(const std::vector<Vector3D> & verticies, const std::vector
 
 	// create Vertex structs from vertex positions, temporarily store them in an array so that they are indexable
 	std::vector<Vertex*> vertex_ptrs;
+	float inf = std::numeric_limits<float>::infinity();
+	Vector3D v_min(inf, inf, inf);
+	Vector3D v_max(-inf, -inf, -inf);
 	for(const Vector3D & v : verticies){
 		vertex_ptrs.push_back(new Vertex(v));
+		if(v.x < v_min.x){
+			v_min.x = v.x;
+		}
+		if(v.x > v_max.x){
+			v_max.x = v.x;
+		}
+		if(v.y < v_min.y){
+			v_min.y = v.y;
+		}
+		if(v.y > v_max.y){
+			v_max.y = v.y;
+		}
+		if(v.z < v_min.z){
+			v_min.z = v.z;
+		}
+		if(v.z > v_max.z){
+			v_max.z = v.z;
+		}
 	}
+	_centerPos = (v_min+v_max)/2.f;
 
 	/* create triangular faces from indicies */
 	size_t num_indicies = indicies.size();
@@ -220,56 +242,86 @@ void DynamicMesh::set(const std::vector<Vector3D> & verticies, const std::vector
 
 void DynamicMesh::upload(zer0::Mesh & face_mesh, zer0::Mesh & edge_mesh)
 {
+	static const int average_faces_per_vertex = 4;
 	// assign a unique id to every Vertex and store their positions in an array
 	const size_t num_verts = _vertexList.getSize();
-	Vector3D * verts = new Vector3D[num_verts];
-	int i = 0;
+	std::vector<VN> verts; 
+	verts.reserve(num_verts*average_faces_per_vertex);
+
 	for(Vertex * v = _vertexList.getFirst(); v != nullptr; v = v->getNext()){
-		v->id = i;
-		verts[i] = v->position;
-		i++;
+		v->id = verts.size();
+
+		// get all faces from vertex
+		std::set<Face*> faces;
+		v->getFaces(faces);
+		Vector3D accum_normal(0,0,0);
+		for(Face * f : faces){// for each face add vertex with corresponding normal
+			f->calculateNormal();
+			accum_normal += f->normal;
+		}
+		verts.push_back(VN(v->position, accum_normal.getNormalized()));
+		for(Face * f : faces){
+			verts.push_back(VN(v->position, f->normal));
+		}
 	}
 	
 	// face mesh
 	// iterate all faces and store vertex indices
 	const size_t num_indices = 3*_faceList.getSize();
 	unsigned int * indices = new unsigned int[num_indices];
-	i = 0;
+	int index_count = 0;
 	for(Face * f = _faceList.getFirst(); f != nullptr; f = f->getNext()){
 		for(int fi =0; fi < 3; fi++){
-			indices[i] = f->v[fi]->id;
-			i++;
+			// search for this face inside vertex face list
+			std::set<Face*> faces;
+			f->v[fi]->getFaces(faces);
+			int j = 0;
+			for(Face * fj : faces){
+				if(fj == f){
+					break;
+				}
+				j++;
+			}
+			indices[index_count] = f->v[fi]->id + j + 1;
+			index_count++;
 		}
 	}
 
-	// set new verticies in mesh, this removes all normal data
+	// put vertices and normals into a single buffer with first verts and then normals 
+	unsigned int v_size = verts.size();
+	Vector3D * vert_norms = new Vector3D[v_size*2];
+	for(unsigned int i = 0; i < v_size; i++){
+		vert_norms[0      + i] = verts[i].v;
+		vert_norms[v_size + i] = verts[i].n;
+	}
+
+	// set new verticies in mesh
 	face_mesh.set3DIndexed(
-		(float*)verts, num_verts,
+		(float*)vert_norms, v_size,
 		indices, num_indices,
-		Mesh::ONLY_POSITION, GL_TRIANGLES);
+		Mesh::NORMAL, GL_TRIANGLES);
 	delete[] indices;
+
 
 	// edge mesh
 	const size_t num_edge_indices = 2*_edgeList.getSize();
 	unsigned int * edge_indices = new unsigned int[num_edge_indices];
-	i = 0;
+	int edge_count = 0;
 	for(Edge * e = _edgeList.getFirst(); e != nullptr; e = e->getNext()){
-		edge_indices[i] = e->v[0]->id;	
-		i++;
-		edge_indices[i] = e->v[1]->id;	
-		i++;
+		edge_indices[edge_count] = e->v[0]->id;	
+		edge_count++;
+		edge_indices[edge_count] = e->v[1]->id;	
+		edge_count++;
 	}
 
 	edge_mesh.set3DIndexed(
-		(float*)verts,
-		num_verts,
+		(float*)vert_norms, v_size,
 		edge_indices,
 		num_edge_indices,
 		Mesh::ONLY_POSITION, GL_LINES);
 
 	delete[] edge_indices;
-
-	delete[] verts;
+	delete[] vert_norms;
 }
 
 void DynamicMesh::integrity_check()

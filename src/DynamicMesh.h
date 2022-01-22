@@ -24,6 +24,14 @@ public:
 	struct Face;
 	struct CollapseCostCompare;
 
+	/* vector and normal convinience structure */
+	struct VN{
+		VN(){}
+		VN(const zer0::Vector3D & _v, const zer0::Vector3D & _n): v(_v), n(_n){}
+		zer0::Vector3D v;
+		zer0::Vector3D n;
+	};
+
 	/* type of priority queue
 	 * NOTE: we do not use a std::prio_queue here because removal of arbitrary elements is not possible
 	 *  we have to live with the fact that inserting in order now takes O(n) time
@@ -277,12 +285,14 @@ public:
 	BackReferenceList<Face>& getFaceList(){return _faceList;}
 	BackReferenceList<Edge>& getEdgeList(){return _edgeList;}
 
+	const zer0::Vector3D& getCenterPos(){return _centerPos;}
 private:
 	BackReferenceList<Vertex> _vertexList;
 	BackReferenceList<Face> _faceList;
 	BackReferenceList<Edge> _edgeList;
 
 	CollapseListType _collapseList; // edge collapses to be considered for mesh approximation, sorted by cost
+	zer0::Vector3D _centerPos;// center of bounding box around model
 };
 
 #endif

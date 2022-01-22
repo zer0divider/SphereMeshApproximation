@@ -3,21 +3,22 @@
 #include "ModelViewer.h"
 
 /* configuration */
-#define CAMERA_ROTATION_FACTOR 0.005
+#define CAMERA_ROTATION_FACTOR  0.005
+#define CAMERA_TRANSLATE_FACTOR 0.001
 #define CAMERA_ZOOM_FACTOR     1.1
 #define CAMERA_FOV             70
 #define BACKGROUND_COLOR       0x303030FF
 #define MESH_FILL_COLOR        0x2c92ffFF
 #define MESH_LINE_COLOR        0xF0F0F0FF
 #define SPHERE_COLOR           0xff922cFF
-#define LINE_WIDTH             2
+#define LINE_WIDTH             1
 #define KEY_MODE_SWITCH        SDLK_m
 /*****************/
 
 using namespace zer0;
 
 ModelViewer::ModelViewer():
-	_camera(CAMERA_ROTATION_FACTOR, CAMERA_ZOOM_FACTOR),
+	_camera(CAMERA_ROTATION_FACTOR, CAMERA_ZOOM_FACTOR, CAMERA_TRANSLATE_FACTOR),
 	_meshFillColor(MESH_FILL_COLOR),
 	_meshLineColor(MESH_LINE_COLOR),
 	_sphereColor(SPHERE_COLOR)
@@ -64,7 +65,9 @@ bool ModelViewer::init(const std::string & model_file)
 	INFO("Took %.2f seconds\n", (t2-t)/1000.f);
 	INFO("Done.");
 
+	INFO("Uploading mesh...");
 	_dynamicMesh.upload(_faceMesh, _edgeMesh);
+	INFO("Done.");
 
 	// set initial draw mode
 	setDrawMode(FILL_AND_LINE);
@@ -84,6 +87,7 @@ void ModelViewer::render()
 	/* render model */
 	drawMesh();
 
+	drawSphereMesh();
 	/*
 	Matrix4 m;
 	m.loadIdentity();
@@ -93,19 +97,18 @@ void ModelViewer::render()
 	_singleSphereMesh.bind();
 	_singleSphereMesh.draw();
 	*/
-	drawSphereMesh();
 }
 
 void ModelViewer::drawSphereMesh(){
+	_meshShader.setLightMode(DiffuseShader::MATCAP);
 	Matrix4 m;
-	m.loadIdentity();
-
+	Vector3D center = -_dynamicMesh.getCenterPos();
 	BackReferenceList<DynamicMesh::Vertex> & verts = _dynamicMesh.getVertexList();
 	SHADER->setColor(_sphereColor);
 	_singleSphereMesh.bind();
 	for(DynamicMesh::Vertex * v = verts.getFirst(); v != nullptr; v = v->getNext()){
 		if(v->sphere_radius > 0.001f){
-			m.setTransform(v->position, v->sphere_radius, Vector3D_zer0);
+			m.setTransform(center+v->position, v->sphere_radius, Vector3D_zer0);
 			//m.setTranslation(v->position);
 			SHADER->setModelMatrix(m);
 			_singleSphereMesh.draw();
@@ -116,7 +119,7 @@ void ModelViewer::drawSphereMesh(){
 void ModelViewer::drawMesh()
 {
 	Matrix4 m;
-	m.loadIdentity();
+	m.setTranslation(-_dynamicMesh.getCenterPos());
 	SHADER->setModelMatrix(m);
 	
 	glLineWidth(LINE_WIDTH);
@@ -143,25 +146,14 @@ void ModelViewer::drawMesh()
 		_faceMesh.draw();
 
 		// draw line on top
-		//_meshShader.setNormalOffset(0.0001);
+		_meshShader.setNormalOffset(0.001);
+		_meshShader.setLightMode(DiffuseShader::UNSHADED);
 		SHADER->setColor(_meshLineColor);
-		//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 		_edgeMesh.bind();
 		_edgeMesh.draw();
-		//_meshShader.setNormalOffset(0);
+		_meshShader.setNormalOffset(0);
 	}break;
 	}
-
-/*
-	glClear(GL_DEPTH_BUFFER_BIT);
-	_meshShader.setLightMode(DiffuseShader::UNSHADED);
-	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-
-	// draw faces of selected edge
-	SHADER->setColor(Color::GREEN);
-	_selectedEdgeFacesMesh.bind();
-	_selectedEdgeFacesMesh.draw();
-	*/
 
 }
 
@@ -179,7 +171,7 @@ void ModelViewer::eventKeyboard(SDL_Keycode key, bool pressed, int repeat)
 		case SDLK_SPACE:{
 		// collapse into single vertex
 			Uint32 t = SDL_GetTicks();
-			_dynamicMesh.sphereApproximation(20);
+			_dynamicMesh.sphereApproximation(40);
 			INFO("Done, took %.2f seconds.", (SDL_GetTicks()-t)/1000.f);
 			_dynamicMesh.upload(_faceMesh, _edgeMesh);
 		}break;
@@ -221,8 +213,11 @@ void ModelViewer::selectEdge(DynamicMesh::Edge * e)
 void ModelViewer::eventMouseMotion(int x, int y, int rel_x, int rel_y)
 {
 	Uint8 state = SDL_GetMouseState(NULL, NULL);
-	if(state & SDL_BUTTON_LEFT){
+	if(state & SDL_BUTTON_LMASK){
 		_camera.mouseRotate(rel_x, rel_y);
+	}
+	else if(state & SDL_BUTTON_RMASK){
+		_camera.mouseTranslate(rel_x, rel_y);
 	}
 }
 

@@ -18,6 +18,12 @@ void Camera::mouseRotate(int rel_x, int rel_y)
 	_rotation += Vector2D(rel_y, rel_x)*_rotFactor;
 }
 
+void Camera::mouseTranslate(int rel_x, int rel_y)
+{
+	_pos.x -= rel_x*_translateFactor*_pos.z;
+	_pos.y += rel_y*_translateFactor*_pos.z;
+}
+
 void Camera::mouseZoom(int wheel)
 {
 	if(wheel > 0){
