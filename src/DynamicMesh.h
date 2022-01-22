@@ -9,7 +9,7 @@
 #include <assert.h>
 #include "BackReferenceList.h"
 #include "SQEM.h"
-#include "PrioList.h"
+#include <queue>
 
 /**
  * offline mesh format, for quickly applying geometry transformations (e.g. edge collapse)
@@ -28,7 +28,7 @@ public:
 	 * NOTE: we do not use a std::prio_queue here because removal of arbitrary elements is not possible
 	 *  we have to live with the fact that inserting in order now takes O(n) time
 	 */
-	typedef PrioList<Edge*, CollapseCostCompare> CollapseListType;
+	typedef std::priority_queue<Edge*, std::vector<Edge*>, CollapseCostCompare> CollapseListType;
 
 	/**
 	 * vertex that holds a position
@@ -258,10 +258,16 @@ public:
 
 
 	/**
-	 * run sphere mesh approximation based on SQEM
-	 * IMPORTANT: run initSQEM() first
+	 * run sphere mesh approximation based on SQEM until the given number of spheres is reached
+	 * NOTE: initSQEM() has to be called first
 	 */
-	void sphereApproximation();	
+	void sphereApproximation(int num_spheres);
+
+	/*
+	 * perform a single step for sphere approximation
+	 * NOTE: initSQEM() has to be called first
+	 */
+	void sphereApproximationStep();
 
 	void debug_print();
 

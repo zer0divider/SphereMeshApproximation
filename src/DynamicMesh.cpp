@@ -492,7 +492,14 @@ void DynamicMesh::initSQEM()
 	}
 }
 
-void DynamicMesh::sphereApproximation()
+void DynamicMesh::sphereApproximation(int num_spheres)
+{
+	while(_vertexList.getSize() > num_spheres){
+		sphereApproximationStep();
+	}
+}
+
+void DynamicMesh::sphereApproximationStep()
 {
 	// assume initSQEM() has been called at this point
 	/////
@@ -508,18 +515,13 @@ void DynamicMesh::sphereApproximation()
 
 	SQEM new_q = collapsing_edge->Q;
 	float sphere_radius = collapsing_edge->sphere_radius;
-	if(sphere_radius != 0.f){
-		INFO("sphere radius: %f", sphere_radius);
-	}
 	Vertex * v;
 	std::vector<Edge*> removed_edges;
 	edgeCollapse(collapsing_edge, collapsing_edge->sphere_center, &v, &removed_edges);
 	collapsing_edge = nullptr;
-	//INFO("Removing %lu + 1 edges\n", removed_edges.size());
 	
 	v->Q = new_q;
 	v->sphere_radius = sphere_radius;
-	//INFO("sphere radius: %f", sphere_radius);
 
 	// mark edges from prio queue as 'removed' and remove from global edge list
 	std::vector<Edge*>::iterator it = removed_edges.begin();
@@ -553,11 +555,9 @@ void DynamicMesh::sphereApproximation()
 	while(!_collapseList.empty() && collapsing_edge == nullptr){
 		collapsing_edge = _collapseList.top();
 		if(collapsing_edge->needs_removal){
-			INFO("Skipping removed edge.");
 			_collapseList.pop();
 			delete collapsing_edge;
 			collapsing_edge = nullptr;
 		}
 	}
-	INFO("Collapse list contains %lu elements.", _collapseList.size());
 }

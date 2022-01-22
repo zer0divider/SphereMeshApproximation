@@ -9,6 +9,7 @@
 #define BACKGROUND_COLOR       0x303030FF
 #define MESH_FILL_COLOR        0x2c92ffFF
 #define MESH_LINE_COLOR        0xF0F0F0FF
+#define SPHERE_COLOR           0xff922cFF
 #define LINE_WIDTH             2
 #define KEY_MODE_SWITCH        SDLK_m
 /*****************/
@@ -18,7 +19,8 @@ using namespace zer0;
 ModelViewer::ModelViewer():
 	_camera(CAMERA_ROTATION_FACTOR, CAMERA_ZOOM_FACTOR),
 	_meshFillColor(MESH_FILL_COLOR),
-	_meshLineColor(MESH_LINE_COLOR)
+	_meshLineColor(MESH_LINE_COLOR),
+	_sphereColor(SPHERE_COLOR)
 {
 }
 
@@ -35,6 +37,9 @@ bool ModelViewer::init(const std::string & model_file)
 	_meshShader.init();
 	_meshShader.use();
 	_meshShader.setLightDir(Vector3D(1.0, 1.5, 1.3).getNormalized());
+
+	// creating single sphere
+	_singleSphereMesh.loadPrimitive(Mesh::SPHERE, Vector3D(2,2,2), 16);
 
 	// loading test obj
 	std::vector<Vector3D> vertex_data;
@@ -57,9 +62,7 @@ bool ModelViewer::init(const std::string & model_file)
 	_dynamicMesh.initSQEM();
 	Uint32 t2 = SDL_GetTicks();
 	INFO("Took %.2f seconds\n", (t2-t)/1000.f);
-	selectEdge(_dynamicMesh.getBestCollapseEdge());
 	INFO("Done.");
-
 
 	_dynamicMesh.upload(_faceMesh, _edgeMesh);
 
@@ -80,6 +83,34 @@ void ModelViewer::render()
 	
 	/* render model */
 	drawMesh();
+
+	/*
+	Matrix4 m;
+	m.loadIdentity();
+	SHADER->setModelMatrix(m);
+	SHADER->setColor(_meshFillColor);
+	_meshShader.setLightMode(DiffuseShader::MATCAP);
+	_singleSphereMesh.bind();
+	_singleSphereMesh.draw();
+	*/
+	drawSphereMesh();
+}
+
+void ModelViewer::drawSphereMesh(){
+	Matrix4 m;
+	m.loadIdentity();
+
+	BackReferenceList<DynamicMesh::Vertex> & verts = _dynamicMesh.getVertexList();
+	SHADER->setColor(_sphereColor);
+	_singleSphereMesh.bind();
+	for(DynamicMesh::Vertex * v = verts.getFirst(); v != nullptr; v = v->getNext()){
+		if(v->sphere_radius > 0.001f){
+			m.setTransform(v->position, v->sphere_radius, Vector3D_zer0);
+			//m.setTranslation(v->position);
+			SHADER->setModelMatrix(m);
+			_singleSphereMesh.draw();
+		}
+	}
 }
 
 void ModelViewer::drawMesh()
@@ -106,7 +137,7 @@ void ModelViewer::drawMesh()
 	}break;
 	case FILL_AND_LINE:{
 		_faceMesh.bind();
-		_meshShader.setLightMode(DiffuseShader::UNSHADED);
+		_meshShader.setLightMode(DiffuseShader::MATCAP);
 		// draw fill
 		SHADER->setColor(_meshFillColor);
 		_faceMesh.draw();
@@ -132,13 +163,6 @@ void ModelViewer::drawMesh()
 	_selectedEdgeFacesMesh.draw();
 	*/
 
-	// draw selected edge
-	glLineWidth(4);
-	SHADER->setColor(Color::RED);
-	glClear(GL_DEPTH_BUFFER_BIT);
-	_selectedEdgeMesh.bind();
-	_selectedEdgeMesh.draw();
-
 }
 
 void ModelViewer::eventKeyboard(SDL_Keycode key, bool pressed, int repeat)
@@ -152,40 +176,12 @@ void ModelViewer::eventKeyboard(SDL_Keycode key, bool pressed, int repeat)
 			}
 			setDrawMode(m);
 		}break;
-		case SDLK_e:
-		case SDLK_g:
-		case SDLK_h:
-		case SDLK_f:{
-			int max = 1;
-			if(key == SDLK_f){
-				max = 10000;
-			}
-			else if(key == SDLK_g){
-				max = 1000;
-			}
-			else if(key == SDLK_h){
-				max = 100;
-			}
-			for(int i = 0; i < max; i++){
-				if(_selectedEdge != nullptr){
-					_dynamicMesh.sphereApproximation();
-					_selectedEdge = _dynamicMesh.getBestCollapseEdge();
-				}
-			}
-			_dynamicMesh.upload(_faceMesh, _edgeMesh);
-			selectEdge(_selectedEdge);
-		}break;
 		case SDLK_SPACE:{
 		// collapse into single vertex
 			Uint32 t = SDL_GetTicks();
-			while(_dynamicMesh.getVertexList().getSize() > 2)
-			{
-				_dynamicMesh.sphereApproximation();
-				_selectedEdge = _dynamicMesh.getBestCollapseEdge();
-			}
+			_dynamicMesh.sphereApproximation(20);
+			INFO("Done, took %.2f seconds.", (SDL_GetTicks()-t)/1000.f);
 			_dynamicMesh.upload(_faceMesh, _edgeMesh);
-			selectEdge(_selectedEdge);
-			INFO("Done, took %.f seconds.", (SDL_GetTicks()-t)/1000.f);
 		}break;
 		case SDLK_RIGHT:
 		case SDLK_LEFT:{

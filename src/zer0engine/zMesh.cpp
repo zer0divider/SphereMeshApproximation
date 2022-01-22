@@ -7,10 +7,10 @@ using namespace zer0;
 void Mesh::loadPrimitive(Primitive p, const Vector3D & dim, int segments, bool smooth)
 {
 	clear();
-	float * verticies = NULL;
+	float * vertices = NULL;
 	GLsizeiptr total_vertex_size = 0;
 	_vertexCount = 0;
-	GLubyte * indicies = NULL;
+	GLubyte * indices = NULL;
 	GLsizeiptr total_index_size = 0;
 	_elementType = GL_UNSIGNED_BYTE;
 	_elementCount = 0;
@@ -31,35 +31,127 @@ void Mesh::loadPrimitive(Primitive p, const Vector3D & dim, int segments, bool s
 			uv_index_offset = value_count;
 			value_count += 24*2;
 			total_vertex_size = sizeof(float)*value_count;
-			verticies = new float[value_count];
-			Vector3D* vertex = (Vector3D*)(&verticies[0]);
+			vertices = new float[value_count];
+			Vector3D* vertex = (Vector3D*)(&vertices[0]);
 			for(int i =0; i < 24; i++){
 				vertex[i] = CUBE_VERTS[i]*half_dim;
 			}
-			Vector3D*normals = (Vector3D*)(&verticies[normal_index_offset]);
+			Vector3D*normals = (Vector3D*)(&vertices[normal_index_offset]);
 			for(int i = 0; i < 24; i++){
 				normals[i] = CUBE_NORMALS[i/4];
 			}
 
-			Vector2D* uv = (Vector2D*)(&verticies[uv_index_offset]);
+			Vector2D* uv = (Vector2D*)(&vertices[uv_index_offset]);
 			for(int i = 0; i < 6; i++){
 				uv[i*4+0].set(1, 0);
 				uv[i*4+1].set(0, 0);
 				uv[i*4+2].set(0, 1);
 				uv[i*4+3].set(1, 1);
 			}
-			indicies = new GLubyte[36];
+			indices = new GLubyte[36];
 			total_index_size = sizeof(GLubyte)*36;
 			for(int i = 0; i < 6; i++){
-				indicies[i*6+0] = 4*i + 0;
-				indicies[i*6+1] = 4*i + 1;
-				indicies[i*6+2] = 4*i + 2;
-				indicies[i*6+3] = 4*i + 2;
-				indicies[i*6+4] = 4*i + 3;
-				indicies[i*6+5] = 4*i + 0;
+				indices[i*6+0] = 4*i + 0;
+				indices[i*6+1] = 4*i + 1;
+				indices[i*6+2] = 4*i + 2;
+				indices[i*6+3] = 4*i + 2;
+				indices[i*6+4] = 4*i + 3;
+				indices[i*6+5] = 4*i + 0;
 			}
 		}break;
 		case SPHERE:{
+			if(segments < 2){
+				segments = 2;
+			}
+			_vertexCount = 2*segments*(segments-1) + 2;
+			assert(_vertexCount <= 65535);// if this assertion triggers, change _elementType from GL_UNSIGNED_SHORT to GL_UNSIGNED_INT
+			GLsizei value_count = _vertexCount*6;
+			total_vertex_size = sizeof(float)*value_count;
+			vertices = new float[value_count];
+			_elementCount = 2*2*3*segments + (segments-2)*2*segments*6;
+			total_index_size = sizeof(GLushort)*_elementCount;
+			_flags = NORMAL;
+			_elementType = GL_UNSIGNED_SHORT;
+			indices = (GLubyte*) new GLushort[_elementCount];
+			GLushort * s_indices = (GLushort*)indices;
+			float last_polar = 0.f;
+			float next_polar = 0.f;
+			float angle_per_i = M_PI/segments;
+			
+			GLsizei v_count = 0;	
+			GLsizei e_count = 0;	
+			Vector3D* v = (Vector3D*)vertices;
+			Vector3D* n = (Vector3D*)(&vertices[_vertexCount*3]);
+			v[v_count].set(0, half_dim.y, 0);
+			n[v_count].set(0, 1.0f, 0);
+			v_count++;
+			for(int i = 0; i < segments-1; i++){
+				float polar = angle_per_i * (i+1);
+				float y_norm = cos(polar);
+				float s_polar = sin(polar);
+				float y_coord = y_norm*half_dim.y;
+				for(int j = 0; j < 2*segments; j++){
+					float azimuth = angle_per_i * j;
+					float x_norm = cos(azimuth)*s_polar;
+					float z_norm = sin(azimuth)*s_polar;
+					v[v_count].set(x_norm*half_dim.x, y_coord, z_norm*half_dim.z);
+					n[v_count].set(x_norm, y_norm, z_norm);
+					v_count++;
+				}
+			}
+			v[v_count].set(0, -half_dim.y, 0);
+			n[v_count].set(0, -1.f, 0);
+			v_count++;
+			// set upper triangle part
+			int num_tris = 2*segments;
+			for(int i = 0; i < num_tris; i++){
+				s_indices[e_count+1]   = 0;
+				s_indices[e_count] = 1+ i;
+				if(i == num_tris-1){
+					s_indices[e_count+2] = 1;
+				}
+				else{
+					s_indices[e_count+2] = 1+ (i+1);
+				}
+				e_count+=3;
+			}
+
+			// set middle quad part
+			int num_quads_per_row = 2*segments;
+			for(int j = 0; j < segments-2; j++ ){
+				int offset = 1+j*segments*2;
+				for(int i = 0; i < num_quads_per_row; i++){
+					s_indices[e_count+0] = offset + i;
+					if(i == num_quads_per_row-1){
+						s_indices[e_count+1] = offset;
+						s_indices[e_count+2] = offset + 2*segments;
+					}
+					else{
+						s_indices[e_count+1] = offset + i + 1;
+						s_indices[e_count+2] = offset + 2*segments + i + 1;
+					}
+					s_indices[e_count+3] = offset + 2*segments + i;
+					s_indices[e_count+4] = s_indices[e_count+0];
+					s_indices[e_count+5] = s_indices[e_count+2];
+					e_count+=6;
+				}
+			}
+
+			// set lower triangle part
+			for(int i = 0; i < num_tris; i++){
+				s_indices[e_count+1]   = _vertexCount-1;
+				s_indices[e_count] = (_vertexCount-2) - i;
+				if(i == num_tris-1){
+					s_indices[e_count+2] = (_vertexCount-2);
+				}
+				else{
+					s_indices[e_count+2] = (_vertexCount-3) - i;
+				}
+				e_count+=3;
+			}
+
+			assert(v_count == _vertexCount);
+			assert(e_count == _elementCount);
 		}break;
 		case CYLINDER:{
 		}break;
@@ -72,18 +164,18 @@ void Mesh::loadPrimitive(Primitive p, const Vector3D & dim, int segments, bool s
 			_drawMode = GL_TRIANGLE_FAN;
 			_elementCount = 0;
 			total_vertex_size = sizeof(float)*_vertexCount*4;
-			verticies = new float[_vertexCount*4];
+			vertices = new float[_vertexCount*4];
 			_flags = UV;
-			verticies[0] = 0;
-			verticies[1] = 0;
-			verticies[_vertexCount*2+0] = 0.5;
-			verticies[_vertexCount*2+1] = 0.5;
-			generateCircleData(dim.x/2.0f, (Vector2D*)&verticies[2], segments);
-			verticies[_vertexCount*2-2] = verticies[2];
-			verticies[_vertexCount*2-1] = verticies[3];
-			generateCircleData(0.5, (Vector2D*)&(verticies[_vertexCount*2+2]), segments, Vector2D(0.5, 0.5));
-			verticies[2*_vertexCount*2-2] = verticies[2*_vertexCount+2];
-			verticies[2*_vertexCount*2-1] = verticies[2*_vertexCount+3];
+			vertices[0] = 0;
+			vertices[1] = 0;
+			vertices[_vertexCount*2+0] = 0.5;
+			vertices[_vertexCount*2+1] = 0.5;
+			generateCircleData(dim.x/2.0f, (Vector2D*)&vertices[2], segments);
+			vertices[_vertexCount*2-2] = vertices[2];
+			vertices[_vertexCount*2-1] = vertices[3];
+			generateCircleData(0.5, (Vector2D*)&(vertices[_vertexCount*2+2]), segments, Vector2D(0.5, 0.5));
+			vertices[2*_vertexCount*2-2] = vertices[2*_vertexCount+2];
+			vertices[2*_vertexCount*2-1] = vertices[2*_vertexCount+3];
 			_numDimensions = 2;
 		}break;
 		case CIRCLE_LINE:{
@@ -101,22 +193,22 @@ void Mesh::loadPrimitive(Primitive p, const Vector3D & dim, int segments, bool s
 	}
 	assert(total_vertex_size > 0);
 
-	// put verticies in buffer
+	// put vertices in buffer
 	glGenBuffers(1, &_buffer);
 	glBindBuffer(GL_ARRAY_BUFFER, _buffer);
-	glBufferData(GL_ARRAY_BUFFER, total_vertex_size, verticies, GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, total_vertex_size, vertices, GL_STATIC_DRAW);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 
-	// put indicies in buffer
+	// put indices in buffer
 	if(_elementCount > 0){
 		assert(total_index_size > 0);
 		glGenBuffers(1, &_elementBuffer);
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, _elementBuffer);
-		glBufferData(GL_ELEMENT_ARRAY_BUFFER, total_index_size, indicies, GL_STATIC_DRAW);
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, total_index_size, indices, GL_STATIC_DRAW);
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 	}
-	delete[](verticies);
-	delete[](indicies);
+	delete[](vertices);
+	delete[](indices);
 
 }
 
@@ -209,14 +301,14 @@ void Mesh::set3D(const float * data, size_t num_verts, unsigned char components,
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
-void Mesh::set3DIndexed(const float * vertex_data, size_t num_verts, const unsigned int * index_data, size_t num_indicies, unsigned char components, GLenum draw_mode)
+void Mesh::set3DIndexed(const float * vertex_data, size_t num_verts, const unsigned int * index_data, size_t num_indices, unsigned char components, GLenum draw_mode)
 {
 	set3D(vertex_data, num_verts, components, draw_mode);
-	_elementCount = num_indicies;
+	_elementCount = num_indices;
 	_elementType = GL_UNSIGNED_INT;
 	glGenBuffers(1, &_elementBuffer);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, _elementBuffer);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned int)*num_indicies, index_data, GL_STATIC_DRAW);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned int)*num_indices, index_data, GL_STATIC_DRAW);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 }
 
@@ -277,8 +369,8 @@ const Vector3D zer0::CUBE_NORMALS[6] = {
 
 bool Mesh::loadOBJFromFile(const char * filename, 
 							unsigned char components,
-							std::vector<Vector3D> * verticies,
-							std::vector<unsigned int> * indicies)
+							std::vector<Vector3D> * vertices,
+							std::vector<unsigned int> * indices)
 {
 	// loading whole file
 	std::ifstream f;
@@ -299,7 +391,7 @@ bool Mesh::loadOBJFromFile(const char * filename,
 	f.read(buffer, length);
 	f.close();
 	buffer[length] = '\0';
-	bool r = loadOBJ(buffer, components, verticies, indicies);
+	bool r = loadOBJ(buffer, components, vertices, indices);
 	delete[] buffer;
 
 	return r;
@@ -307,8 +399,8 @@ bool Mesh::loadOBJFromFile(const char * filename,
 
 bool Mesh::loadOBJ(const char * obj, 
 				unsigned char components,
-				std::vector<Vector3D> * verticies,
-				std::vector<unsigned int> * indicies)
+				std::vector<Vector3D> * vertices,
+				std::vector<unsigned int> * indices)
 {
 	clear();
 	#define SKIP_WHITESPACE(L, I) while(L[I] == ' ' || L[I] == '\t'){I++;}
@@ -319,7 +411,7 @@ bool Mesh::loadOBJ(const char * obj,
 	static const int LINE_BUFFER_SIZE = 256;
 	static char line[LINE_BUFFER_SIZE];
 	static char face_strings[4][LINE_BUFFER_SIZE];
-	std::vector<Vector3D> * verts = verticies;
+	std::vector<Vector3D> * verts = vertices;
 	if(verts == nullptr){
 		verts = new std::vector<Vector3D>();
 	}
@@ -331,7 +423,7 @@ bool Mesh::loadOBJ(const char * obj,
 	std::vector<Vector3D> comb_verts;
 	std::vector<Vector3D> comb_normals;
 	std::vector<Vector2D> comb_uvs;
-	std::vector<unsigned int> element_indicies;
+	std::vector<unsigned int> element_indices;
 	typedef std::unordered_map<std::string, unsigned int>::value_type face_verts_value_t;
 	std::unordered_map<std::string, unsigned int> face_verts;
 	bool object_found = false;
@@ -442,16 +534,16 @@ bool Mesh::loadOBJ(const char * obj,
 							_flags = flags;
 						}
 						else if(_flags != flags){
-							OBJ_ERROR("Unexpected change in provided indicies.");
+							OBJ_ERROR("Unexpected change in provided indices.");
 							error = true;
 							break;
 						}
-						// adjust by one (obj indicies start from 1)
+						// adjust by one (obj indices start from 1)
 						v_index -=1;	
 						n_index -=1;
 						u_index -=1;	
-						if(indicies != nullptr){
-							indicies->push_back(v_index);
+						if(indices != nullptr){
+							indices->push_back(v_index);
 						}
 						// try inserting
 						auto ret = face_verts.insert(face_verts_value_t(std::string(face_strings[fi]), comb_verts.size()));
@@ -472,7 +564,7 @@ bool Mesh::loadOBJ(const char * obj,
 								break;
 							}
 							else{
-								element_indicies.push_back(comb_verts.size());
+								element_indices.push_back(comb_verts.size());
 								comb_verts.push_back((*verts)[v_index]);
 								if(_flags & NORMAL){
 									comb_normals.push_back(normals[n_index]);
@@ -483,7 +575,7 @@ bool Mesh::loadOBJ(const char * obj,
 							}
 						}
 						else{// already there
-							element_indicies.push_back(ret.first->second);
+							element_indices.push_back(ret.first->second);
 						}
 					}
 					if(error){
@@ -507,11 +599,11 @@ bool Mesh::loadOBJ(const char * obj,
 	if(!error){
 		_flags &= components;
 		// set element buffer
-		_elementCount = element_indicies.size();
+		_elementCount = element_indices.size();
 		_elementType = GL_UNSIGNED_INT;
 		glGenBuffers(1, &_elementBuffer);
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, _elementBuffer);
-		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned int)*_elementCount, element_indicies.data(), GL_STATIC_DRAW);
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned int)*_elementCount, element_indices.data(), GL_STATIC_DRAW);
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 		
 		glGenBuffers(1, &_buffer);
@@ -542,7 +634,7 @@ bool Mesh::loadOBJ(const char * obj,
 		_numDimensions = 3;
 	}
 
-	if(verticies == nullptr){// no vertex list given, created locally so delete now
+	if(vertices == nullptr){// no vertex list given, created locally so delete now
 		delete verts;
 	}
 

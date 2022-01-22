@@ -17,7 +17,7 @@ namespace zer0{
 	extern const Vector3D CUBE_VERTS[24];
 	extern const Vector3D CUBE_NORMALS[6];
 	/**
-	 * Mesh class represents anything that can be drawn from verticies (e.g. 3D Cube, 2D Circle, ...)
+	 * Mesh class represents anything that can be drawn from vertices (e.g. 3D Cube, 2D Circle, ...)
 	 */
 	class Mesh{
 		public:
@@ -45,27 +45,27 @@ namespace zer0{
 			 * Loading wavefront object from file
 			 * @param filename .obj file to load
 			 * @param components what components (e.g. NORMAL, UV) to load if available in file
-			 * @param verticies see loadOBJ()
-			 * @param indicies see loadOBJ()
+			 * @param vertices see loadOBJ()
+			 * @param indices see loadOBJ()
 			 * @return false on error, true on success
 			 */
 			bool loadOBJFromFile(const char * filename, 
 							unsigned char components = 0xFF,
-							std::vector<Vector3D> * verticies = nullptr,
-							std::vector<unsigned int> * indicies = nullptr);
+							std::vector<Vector3D> * vertices = nullptr,
+							std::vector<unsigned int> * indices = nullptr);
 
 			/**
 			 * Loading wavefront object from string
 			 * @param obj 0 terminated string describing the object in Wavefront format (https://en.wikipedia.org/wiki/Wavefront_.obj_file)
 			 * @param components what components (e.g. NORMAL, UV) to load if available in file
-			 * @param verticies if not nullptr vertex data is put into this vector
-			 * @param indicies if not nullptr index data (element buffer) is put into this vector
+			 * @param vertices if not nullptr vertex data is put into this vector
+			 * @param indices if not nullptr index data (element buffer) is put into this vector
 			 * @return false on error, true on success
 			 */
 			bool loadOBJ(const char * obj, 
 							unsigned char components = 0xFF,
-							std::vector<Vector3D> * verticies = nullptr,
-							std::vector<unsigned int> * indicies = nullptr);
+							std::vector<Vector3D> * vertices = nullptr,
+							std::vector<unsigned int> * indices = nullptr);
 
 			/**
 			 * Set vertices to represent the given primitive
@@ -86,7 +86,7 @@ namespace zer0{
 			 * set from indexed 3D vertex data (uses element buffer)
 			 * @param vertex_data is the same as param data in set3D()
 			 */
-			void set3DIndexed(const float * vertex_data, size_t num_verts, const unsigned int * index_data, size_t num_indicies, unsigned char components, GLenum draw_mode);
+			void set3DIndexed(const float * vertex_data, size_t num_verts, const unsigned int * index_data, size_t num_indices, unsigned char components, GLenum draw_mode);
 
 			/**
 			 * Free gl buffers
@@ -124,8 +124,8 @@ namespace zer0{
 			GLuint _buffer;	
 			GLuint _elementBuffer;
 			int _numDimensions;//2D/3D object
-			GLsizei _vertexCount;// number of verticies in buffer
-			GLsizei _elementCount;// actual number of indicies in element buffer
+			GLsizei _vertexCount;// number of vertices in buffer
+			GLsizei _elementCount;// actual number of indices in element buffer
 			GLenum _drawMode;
 			GLenum _elementType;
 			GLubyte _flags;// flags store whether normals/uvs/colors are stored along with vertex position

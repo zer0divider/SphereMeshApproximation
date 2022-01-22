@@ -26,6 +26,7 @@ public:
 
 private:
 	void drawMesh();
+	void drawSphereMesh();
 	void setDrawMode(DrawMode mode);
 	void selectEdge(DynamicMesh::Edge * e);
 
@@ -33,12 +34,14 @@ private:
 	zer0::Mesh _edgeMesh;
 	zer0::Mesh _selectedEdgeMesh;
 	zer0::Mesh _selectedEdgeFacesMesh;
+	zer0::Mesh _singleSphereMesh;
 	std::string _modelFilename;
 	DynamicMesh _dynamicMesh;
 	DynamicMesh::Edge *  _selectedEdge;
 	zer0::Camera _camera;
 	zer0::Color _meshFillColor;
 	zer0::Color _meshLineColor;
+	zer0::Color _sphereColor;
 	DrawMode _currentDrawMode;
 	DiffuseShader _meshShader;
 	zer0::Matrix4 _projectionMat;
