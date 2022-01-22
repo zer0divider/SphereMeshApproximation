@@ -135,7 +135,8 @@ public:
 	 */
 	struct Edge : public BackReferenceList<Edge>::Item
 	{
-		Edge(Vertex * _v0, Vertex * _v1): v{_v0, _v1} {}
+		Edge(Vertex * _v0, Vertex * _v1): v{_v0, _v1}, needs_removal(false) {}
+		Edge(const Edge * e): v{e->v[0], e->v[1]}, needs_removal(false){ faces = e->faces; assert(faces.size() == e->faces.size());}
 		~Edge()override{}
 		Vertex* v[2]; // two verticies form an edge
 		
@@ -193,12 +194,12 @@ public:
 			collapse_cost = Q.minimize<zer0::Vector3D, float>(sphere_center, sphere_radius, v[0]->position, v[1]->position);
 		}
 
-		CollapseListType::iterator collapse_list_iterator; //iterator in collapse list
+		bool needs_removal;// set to true if this edge should be deleted
 	}; // struct Edge
 
 	struct CollapseCostCompare{
 		bool operator()(const Edge * e1, const Edge * e2){
-			return e1->collapse_cost < e2->collapse_cost;
+			return e1->collapse_cost > e2->collapse_cost;
 		}
 	};
 
@@ -232,7 +233,7 @@ public:
 	/* get edge with currently lowest cost
 	 * if no more edges, returns nullptr
 	 */
-	Edge* getBestCollapseEdge(){return _collapseList.empty()? nullptr : _collapseList.front();}
+	Edge* getBestCollapseEdge(){return _collapseList.empty()? nullptr : _collapseList.top();}
 
 	/**
 	 * collapse edge to new position

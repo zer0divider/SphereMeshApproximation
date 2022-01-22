@@ -485,13 +485,11 @@ void DynamicMesh::initSQEM()
 		}
 	}
 
-	// minimize SQEM for each edge (vertex-pair)
-	// NOTE: it is much faster to first insert all the edges unordered and then sort the whole list
+	// minimize SQEM for each edge (vertex-pair) and put in prio queue
 	for(Edge * e = _edgeList.getFirst(); e != nullptr; e = e->getNext()){
 		e->updateSQEM();
-		e->collapse_list_iterator = _collapseList.insert_end(e);
+		_collapseList.push(e);
 	}
-	_collapseList.sort();
 }
 
 void DynamicMesh::sphereApproximation()
@@ -499,13 +497,14 @@ void DynamicMesh::sphereApproximation()
 	// assume initSQEM() has been called at this point
 	/////
 	if(_collapseList.empty()){
+		INFO("No more edges to collapse.");
 		return;
 	}
-	//INFO("Collapse list contains %lu elements.", _collapseList.size());
 
 	// take next best collapse candidate
-	Edge * collapsing_edge = _collapseList.front();
-	_collapseList.pop_front();
+	Edge * collapsing_edge = _collapseList.top();
+	_collapseList.pop();
+	assert(collapsing_edge->needs_removal == false);
 
 	SQEM new_q = collapsing_edge->Q;
 	float sphere_radius = collapsing_edge->sphere_radius;
@@ -515,25 +514,50 @@ void DynamicMesh::sphereApproximation()
 	Vertex * v;
 	std::vector<Edge*> removed_edges;
 	edgeCollapse(collapsing_edge, collapsing_edge->sphere_center, &v, &removed_edges);
+	collapsing_edge = nullptr;
 	//INFO("Removing %lu + 1 edges\n", removed_edges.size());
 	
 	v->Q = new_q;
 	v->sphere_radius = sphere_radius;
 	//INFO("sphere radius: %f", sphere_radius);
 
-	// remove edges from prio queue
+	// mark edges from prio queue as 'removed' and remove from global edge list
 	std::vector<Edge*>::iterator it = removed_edges.begin();
 	while(it != removed_edges.end()){
-		_collapseList.erase((*it)->collapse_list_iterator);
-		_edgeList.remove(*it);
+		(*it)->needs_removal = true;
+		_edgeList.extract(*it);
 		it++;
 	}
 
 	// recalculate and minimize SQEM of edges that have been changed, and reinsert into collapse list
-	for(Edge * e : v->edges){
-		_collapseList.erase(e->collapse_list_iterator);
-		e->updateSQEM();
-		e->collapse_list_iterator = _collapseList.insert(e);
+	std::set<Edge*> update_edges = v->edges;
+	for(Edge * e : update_edges){
+		// remove old edge from list
+		_edgeList.extract(e);
+		e->v[0]->edges.erase(e);
+		e->v[1]->edges.erase(e);
+
+		// create new from old edge
+		Edge * updated_edge = new Edge(e);
+		updated_edge->v[0]->edges.insert(updated_edge);
+		updated_edge->v[1]->edges.insert(updated_edge);
+		_edgeList.add(updated_edge);
+		updated_edge->updateSQEM();
+		_collapseList.push(updated_edge);
+
+		// mark old edge as 'removed'
+		e->needs_removal = true;
+	}
+
+	// remove all edges marked as 'removed' from top so we have best candidate at top for next iteration
+	while(!_collapseList.empty() && collapsing_edge == nullptr){
+		collapsing_edge = _collapseList.top();
+		if(collapsing_edge->needs_removal){
+			INFO("Skipping removed edge.");
+			_collapseList.pop();
+			delete collapsing_edge;
+			collapsing_edge = nullptr;
+		}
 	}
 	INFO("Collapse list contains %lu elements.", _collapseList.size());
 }

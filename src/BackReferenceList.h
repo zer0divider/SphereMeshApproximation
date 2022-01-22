@@ -98,6 +98,27 @@ public:
 	}
 
 	/**
+	 * remove an item from the list but do not delete
+	 */
+	void extract(T * item){
+		Item * e = (Item*)item;
+		if(e->_prev != NULL){
+			e->_prev->_next = e->_next;
+		}
+		else{
+			_first = e->_next;
+		}
+		if(e->_next != NULL){
+			e->_next->_prev = e->_prev;
+		}
+		else{
+			_last = e->_prev;
+		}
+
+		_size--;
+	}
+
+	/**
 	 * delete all items
 	 */
 	void clear(){

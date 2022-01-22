@@ -34,42 +34,19 @@ int main()
 	// testing own prio queue
 	printf("### Testing own PrioList ###\n");
 	PrioList<DynamicMesh::Edge*, DynamicMesh::CollapseCostCompare> my_prio;
-	my_prio.insert(&e3);
-	my_prio.insert(&e1);
-	my_prio.insert(&e2);
-	my_prio.insert(&e4);
+	my_prio.push(&e3);
+	my_prio.push(&e1);
+	my_prio.push(&e2);
+	my_prio.push(&e4);
 	printf("Pop from prio queue.\n");
-	assert(my_prio.front() == &e4);
-	my_prio.pop_front();
-	assert(my_prio.front() == &e1);
-	my_prio.pop_front();
-	assert(my_prio.front() == &e2);
-	my_prio.pop_front();
-	assert(my_prio.front() == &e3);
-	my_prio.pop_front();
-
-	DynamicMesh::Edge e_big(nullptr, nullptr);
-	e_big.collapse_cost = 12;
-	my_prio.insert(&e_big);
-	assert(my_prio.back() == &e_big);
-
-	printf("All valid.\n\n");
-
-	printf("### Testing own PrioList with sort ###\n");
-	my_prio.clear();
-	my_prio.insert_end(&e2);
-	my_prio.insert_end(&e1);
-	my_prio.insert_end(&e3);
-
-	printf("Sorting.\n");
-	my_prio.sort();
-	printf("Checking sorting.\n");
-	assert(my_prio.front() == &e1);
-	my_prio.pop_front();
-	assert(my_prio.front() == &e2);
-	my_prio.pop_front();
-	assert(my_prio.front() == &e3);
-	my_prio.pop_front();
+	assert(my_prio.top() == &e4);
+	my_prio.pop();
+	assert(my_prio.top() == &e1);
+	my_prio.pop();
+	assert(my_prio.top() == &e2);
+	my_prio.pop();
+	assert(my_prio.top() == &e3);
+	my_prio.pop();
 
 	printf("All valid.\n\n");
 
