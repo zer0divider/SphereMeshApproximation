@@ -20,7 +20,7 @@ namespace zer0{
 			void set(float _x, float _y, float _z, float _w){x = _x; y = _y; z = _z; w = _w;}
 			void set(const Vector3D & v3, float _w){x = v3.x; y = v3.y; z = v3.z; w = _w;}
 
-			Vector3D getVector3D(){return Vector3D(x, y, z);}
+			Vector3D getVector3D()const{return Vector3D(x, y, z);}
 
 		float x, y, z, w;
 	};

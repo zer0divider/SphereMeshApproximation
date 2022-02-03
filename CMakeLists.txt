@@ -21,6 +21,8 @@ set(PROJECT_SOURCES
 	DynamicMesh.h
 	DynamicMesh.cpp
 	BackReferenceList.h
+	SphereMesh.cpp
+	SphereMesh.h
 )
 
 # add source folder prefix

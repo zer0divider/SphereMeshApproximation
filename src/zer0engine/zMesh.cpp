@@ -242,6 +242,9 @@ void Mesh::clear()
 }
 
 void Mesh::bind(GLubyte flags){
+	if(_vertexCount == 0){
+		return;
+	}
 	int offset = _numDimensions*_vertexCount;
 	glBindBuffer(GL_ARRAY_BUFFER, _buffer);
 

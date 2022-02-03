@@ -11,7 +11,13 @@
 #define MESH_FILL_COLOR        0x2c92ffFF
 #define MESH_LINE_COLOR        0xF0F0F0FF
 #define SPHERE_COLOR           0xff922cFF
+#define MIN_SPHERE_RADIUS      0.001
+#define CYLINDER_COLOR         0xa0a0a0FF
+#define CYLINDER_RADIUS_OFFSET 0.002
+#define TRIANGLE_COLOR         0xa0a0efFF
+#define MIN_CYLINDER_RADIUS    0.001
 #define LINE_WIDTH             1
+#define NUM_SEGMENTS           32         /* number of segments (aka smoothness) used for rendering spheres and cylinders in sphere mesh */
 #define KEY_MODE_SWITCH        SDLK_m
 /*****************/
 
@@ -20,8 +26,7 @@ using namespace zer0;
 ModelViewer::ModelViewer():
 	_camera(CAMERA_ROTATION_FACTOR, CAMERA_ZOOM_FACTOR, CAMERA_TRANSLATE_FACTOR),
 	_meshFillColor(MESH_FILL_COLOR),
-	_meshLineColor(MESH_LINE_COLOR),
-	_sphereColor(SPHERE_COLOR)
+	_meshLineColor(MESH_LINE_COLOR)
 {
 }
 
@@ -39,10 +44,7 @@ bool ModelViewer::init(const std::string & model_file)
 	_meshShader.use();
 	_meshShader.setLightDir(Vector3D(1.0, 1.5, 1.3).getNormalized());
 
-	// creating single sphere
-	_singleSphereMesh.loadPrimitive(Mesh::SPHERE, Vector3D(2,2,2), 16);
-
-	// loading test obj
+	// loading obj
 	std::vector<Vector3D> vertex_data;
 	std::vector<unsigned int> index_data;
 	INFO("Loading mesh from '%s'...", _modelFilename.c_str());
@@ -58,16 +60,28 @@ bool ModelViewer::init(const std::string & model_file)
 	_dynamicMesh.set(vertex_data, index_data);
 
 
-	INFO("Initializing SQEM...");
+	// initialize SQEM of each vertex
+	INFO("-> Initializing SQEM...");
 	Uint32 t = SDL_GetTicks();
 	_dynamicMesh.initSQEM();
 	Uint32 t2 = SDL_GetTicks();
-	INFO("Took %.2f seconds\n", (t2-t)/1000.f);
-	INFO("Done.");
+	INFO("   Done, took %.2f seconds\n", (t2-t)/1000.f);
 
-	INFO("Uploading mesh...");
+	// run full Approximation Algorithm
+	int num_spheres = 40;
+	INFO("-> Running Sphere Mesh Approximation Algorithm (reducing to %d spheres) ...", num_spheres);
+	t = SDL_GetTicks();
+	_dynamicMesh.sphereApproximation(num_spheres);
+	INFO("   Done, took %.2f seconds.\n", (SDL_GetTicks()-t)/1000.f);
+
+	// create sphere mesh
+	INFO("-> Uploading mesh...");
+	t = SDL_GetTicks();
 	_dynamicMesh.upload(_faceMesh, _edgeMesh);
-	INFO("Done.");
+	_sphereMesh.init(_dynamicMesh, NUM_SEGMENTS, MIN_SPHERE_RADIUS, CYLINDER_RADIUS_OFFSET, MIN_CYLINDER_RADIUS);
+	INFO("   Done, took %.2f seconds.\n", (SDL_GetTicks()-t)/1000.f);
+	_sphereMesh.setColors(zer0::Color(SPHERE_COLOR), zer0::Color(CYLINDER_COLOR), zer0::Color(TRIANGLE_COLOR));
+	_sphereMesh.setPosition(-_dynamicMesh.getCenterPos());
 
 	// set initial draw mode
 	setDrawMode(FILL_AND_LINE);
@@ -84,36 +98,16 @@ void ModelViewer::render()
 	/* update camera */
 	_camera.upload();
 	
-	/* render model */
+	/* draw model */
 	drawMesh();
 
+	/* draw sphere mesh */
 	drawSphereMesh();
-	/*
-	Matrix4 m;
-	m.loadIdentity();
-	SHADER->setModelMatrix(m);
-	SHADER->setColor(_meshFillColor);
-	_meshShader.setLightMode(DiffuseShader::MATCAP);
-	_singleSphereMesh.bind();
-	_singleSphereMesh.draw();
-	*/
 }
 
 void ModelViewer::drawSphereMesh(){
 	_meshShader.setLightMode(DiffuseShader::MATCAP);
-	Matrix4 m;
-	Vector3D center = -_dynamicMesh.getCenterPos();
-	BackReferenceList<DynamicMesh::Vertex> & verts = _dynamicMesh.getVertexList();
-	SHADER->setColor(_sphereColor);
-	_singleSphereMesh.bind();
-	for(DynamicMesh::Vertex * v = verts.getFirst(); v != nullptr; v = v->getNext()){
-		if(v->sphere_radius > 0.001f){
-			m.setTransform(center+v->position, v->sphere_radius, Vector3D_zer0);
-			//m.setTranslation(v->position);
-			SHADER->setModelMatrix(m);
-			_singleSphereMesh.draw();
-		}
-	}
+	_sphereMesh.draw();
 }
 
 void ModelViewer::drawMesh()
@@ -169,11 +163,6 @@ void ModelViewer::eventKeyboard(SDL_Keycode key, bool pressed, int repeat)
 			setDrawMode(m);
 		}break;
 		case SDLK_SPACE:{
-		// collapse into single vertex
-			Uint32 t = SDL_GetTicks();
-			_dynamicMesh.sphereApproximation(40);
-			INFO("Done, took %.2f seconds.", (SDL_GetTicks()-t)/1000.f);
-			_dynamicMesh.upload(_faceMesh, _edgeMesh);
 		}break;
 		case SDLK_RIGHT:
 		case SDLK_LEFT:{

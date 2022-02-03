@@ -120,7 +120,7 @@ namespace zer0{
 
 			GLsizei getVertexCount(){return _vertexCount;}
 			GLsizei getElementCount(){return _elementCount;}
-		private:
+		protected:
 			GLuint _buffer;	
 			GLuint _elementBuffer;
 			int _numDimensions;//2D/3D object

@@ -285,6 +285,10 @@ public:
 	BackReferenceList<Face>& getFaceList(){return _faceList;}
 	BackReferenceList<Edge>& getEdgeList(){return _edgeList;}
 
+	const BackReferenceList<Vertex>& getVertexList()const{return _vertexList;}
+	const BackReferenceList<Face>& getFaceList()const{return _faceList;}
+	const BackReferenceList<Edge>& getEdgeList()const{return _edgeList;}
+
 	const zer0::Vector3D& getCenterPos(){return _centerPos;}
 private:
 	BackReferenceList<Vertex> _vertexList;
