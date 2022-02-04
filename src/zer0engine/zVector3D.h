@@ -34,6 +34,11 @@ namespace zer0{
 				);
 			}
 
+			// dot product
+			static float dot(const Vector3D & a, const Vector3D & b){
+				return a.x*b.x + a.y*b.y + a.z*b.z;
+			}
+
 			//calculations
 			void normalize();
 			Vector3D getNormalized() const;

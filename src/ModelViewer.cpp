@@ -49,7 +49,7 @@ bool ModelViewer::init(const std::string & model_file)
 	std::vector<unsigned int> index_data;
 	INFO("Loading mesh from '%s'...", _modelFilename.c_str());
 	if(_faceMesh.loadOBJFromFile(_modelFilename.c_str(), Mesh::NORMAL, &vertex_data, &index_data)){
-		INFO("  -> #verticies: %d", _faceMesh.getVertexCount());
+		INFO("  -> #vertices: %d", _faceMesh.getVertexCount());
 		INFO("  -> #triangles: %d", _faceMesh.getElementCount()/3);
 		INFO(" ");
 	}
@@ -74,6 +74,7 @@ bool ModelViewer::init(const std::string & model_file)
 	_dynamicMesh.sphereApproximation(num_spheres);
 	INFO("   Done, took %.2f seconds.\n", (SDL_GetTicks()-t)/1000.f);
 
+
 	// create sphere mesh
 	INFO("-> Uploading mesh...");
 	t = SDL_GetTicks();
@@ -82,6 +83,14 @@ bool ModelViewer::init(const std::string & model_file)
 	INFO("   Done, took %.2f seconds.\n", (SDL_GetTicks()-t)/1000.f);
 	_sphereMesh.setColors(zer0::Color(SPHERE_COLOR), zer0::Color(CYLINDER_COLOR), zer0::Color(TRIANGLE_COLOR));
 	_sphereMesh.setPosition(-_dynamicMesh.getCenterPos());
+
+	INFO("Final Sphere Mesh:\n"
+	     "  -> #spheres/vertices: %lu\n"
+	     "  -> #edges:            %lu\n"
+	     "  -> #faces:            %lu\n",
+		 _dynamicMesh.getVertexList().getSize(),
+		 _dynamicMesh.getEdgeList().getSize(),
+		 _dynamicMesh.getFaceList().getSize());
 
 	// set initial draw mode
 	setDrawMode(FILL_AND_LINE);
@@ -99,7 +108,7 @@ void ModelViewer::render()
 	_camera.upload();
 	
 	/* draw model */
-	drawMesh();
+	//drawMesh();
 
 	/* draw sphere mesh */
 	drawSphereMesh();

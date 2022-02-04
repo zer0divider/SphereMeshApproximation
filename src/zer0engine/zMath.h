@@ -29,7 +29,7 @@ namespace zer0{
     float deg(float rad);
 
     // return true if abs(a-b) <= epsilon
-    bool equals(float a, float b, float epsilon);
+    bool equals(float a, float b, float epsilon = 0.000001);
 
     // interpolating quadraticly from start to end 
     float quadricInterpolate(float start, float end, float t);
