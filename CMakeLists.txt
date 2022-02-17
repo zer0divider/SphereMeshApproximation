@@ -7,7 +7,6 @@ add_subdirectory(src/zer0engine/)
 cmake_policy(SET CMP0072 NEW)
 find_package(SDL2 REQUIRED)
 find_package(OpenGL REQUIRED)
-find_package(Freetype REQUIRED)
 
 set(SOURCE_FOLDER src)
 set(PROJECT_SOURCES
@@ -37,14 +36,12 @@ include_directories(
 	src/
 	${OPENGL_INCLUDE_DIRS}
 	${SDL2_INCLUDE_DIRS}
-	${FREETYPE_INCLUDE_DIRS}
 )
 
 # specify link libraries
 set(LIBRARIES
 	${SDL2_LIBRARIES}
 	${OPENGL_LIBRARIES}
-	${FREETYPE_LIBRARIES}
 )
 
 # executable
