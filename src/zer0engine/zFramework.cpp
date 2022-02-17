@@ -47,9 +47,6 @@ void Framework::init(const char * app_name)
 Framework::~Framework(){
 	INFO("Application shutdown...");
 
-	// free default fonts
-	Font::freeDefaultFonts();	
-
 	// free default texture
 	Texture2D::freeDefaultTextures();
 

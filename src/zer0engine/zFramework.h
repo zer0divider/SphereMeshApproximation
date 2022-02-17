@@ -10,9 +10,8 @@
 #include "zLogger.h"
 #include "zTexture.h"
 #include "zShader.h"
-#include "zFont.h"
-#include "zTextView.h"
 #include "zConfig.h"
+#include "zRect.h"
 
 /* singleton access */
 #define FW Framework::getInstance()

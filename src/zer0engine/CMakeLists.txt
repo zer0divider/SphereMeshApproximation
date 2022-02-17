@@ -8,7 +8,6 @@ cmake_policy(SET CMP0072 NEW)
 # looking for libraries (SDL2, SDL2_image, OpenGL, freetype)
 find_package(SDL2 REQUIRED)
 find_package(OpenGL REQUIRED)
-find_package(Freetype REQUIRED)
 
 set(ENGINE_SOURCES
 	zer0engine.cpp
@@ -41,12 +40,6 @@ set(ENGINE_SOURCES
 	zMath.cpp
 	zRect.cpp
 	zRect.h
-	zFont.cpp
-	zFont.h
-	zGlyphMap.cpp
-	zGlyphMap.h
-	zTextView.cpp
-	zTextView.h
 	zConfig.h
 
 	glew/glew.c
@@ -55,7 +48,6 @@ set(ENGINE_SOURCES
 include_directories(
 	${OPENGL_INCLUDE_DIRS}
 	${SDL2_INCLUDE_DIRS}
-	${FREETYPE_INCLUDE_DIRS}
 )
 
 add_library(zer0engine ${ENGINE_SOURCES})
