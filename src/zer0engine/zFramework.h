@@ -38,7 +38,7 @@ namespace zer0{
 	 */
 	class Application{
 		public:
-			Application(): _frameCount(0){}
+			Application(){}
 			/**
 			 * destructor
 			 */
@@ -67,18 +67,9 @@ namespace zer0{
 
 			/**
 			 * Called once per main loop cycle after the update()
+			 * @param viewport 1 if left/top viewport shall be rendered (VIEW_VSPLIT), 0 if right/bottom viewport shall be rendered (VIEW_HSPLIT), 0 when whole screen shall be rendered
 			 */
-			virtual void render(){}
-
-			/**
-			 * Update of base application class that is performed at the end of every main loop cycle. Can not be overwritten().
-			 */
-			void baseUpdate(){
-				_frameCount++;
-			}
-		protected:
-			int _frameCount;
-
+			virtual void render(int viewport){}
 	};
 	class Framework : public Singleton<Framework>{
 		public:
@@ -103,6 +94,26 @@ namespace zer0{
 			void run(Application * app);
 
 			/**
+			 * set whether rendering a new frame only happens on change signaled by the application
+			 * @param b if set to true new frame is only drawn on change
+			 */
+			void setRenderOnlyOnChange(bool b){_renderOnChange = b;}
+
+			/**
+			 * re-render (only has an effect if render-on-change is active)
+			 */
+			void renderRequest(){_renderRequest = true;}
+
+			enum ViewPortMode{	VIEW_NORMAL, /* normal, one viewport covers whole window */
+								VIEW_VSPLIT, /* two viewports, window is split vertically */
+								VIEW_HSPLIT  /* two viewports, window is split horizontally */
+							};
+			/**
+			 * set viewport mode (see enum for description)
+			 */
+			void setViewportMode(ViewPortMode v){_viewportMode = v;}
+
+			/**
 			 * get window size
 			 */	
 			int getWindowW(){return _windowW;}
@@ -112,6 +123,11 @@ namespace zer0{
 			 * get aspect ratio window_width/window_height
 			 */
 			float getWindowAspectWH(){return static_cast<float>(_windowW)/_windowH;}
+
+			/**
+			 * get aspect ratio of viewport (depends on viewport mode)
+			 */
+			float getViewportAspectWH();
 			
 			/**
 			 * get aspect ratio window_height/window_width
@@ -158,8 +174,9 @@ namespace zer0{
 			int _frameCount;
 			Uint32 _lastFrameMeasureTime;
 			Uint32 _deltaTime;
-			bool _showFPS;
-			TextView * _FPSView;
+			bool _renderOnChange;
+			bool _renderRequest;
+			ViewPortMode _viewportMode;
 	};
 
 };

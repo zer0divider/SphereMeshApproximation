@@ -100,6 +100,7 @@ namespace zer0{
 
 		//members
 		float values[16];
+		static const Matrix4 IDENTITY;
 	};
 }
 

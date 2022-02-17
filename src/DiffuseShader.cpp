@@ -17,7 +17,7 @@ static const char * VERTEX_SOURCE =
 "	gl_Position = projMat * viewMat * modelMat * vec4((vertex+normal*normal_offset), 1);\n"
 "	out_color = color;\n"
 "	out_normal = (modelMat*vec4(normal,0)).xyz;\n"
-"   out_screen_normal = (projMat*viewMat*vec4(out_normal,0)).xyz;\n"
+"   out_screen_normal = (viewMat*vec4(out_normal,0)).xyz;\n"
 "}\n"
 ;
 
@@ -37,7 +37,7 @@ static const char * FRAGMENT_SOURCE =
 "       vec3 l = max(0,dot(light_dir,normalize(out_normal)))*light_color;\n"
 "       gl_FragColor = vec4((ambient_light + l)*out_color.rgb, out_color.a);\n"
 "   }else if(light_enabled == 2){\n"
-"		float f = -normalize(out_screen_normal).z;\n"
+"		float f = normalize(out_screen_normal).z;\n"
 "       gl_FragColor = vec4(out_color.rgb*f, out_color.a);\n"
 "   }\n"
 "   else{\n"

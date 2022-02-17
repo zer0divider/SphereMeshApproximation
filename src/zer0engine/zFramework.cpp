@@ -26,7 +26,7 @@ void zer0::shutdown()
 	Logger::destroy();
 }
 
-Framework::Framework() : _showFPS(false), _FPSView(NULL), _desiredFPS(60), _measuredFPS(0.0), _deltaTime(0)
+Framework::Framework() : _viewportMode(VIEW_NORMAL), _renderOnChange(false), _renderRequest(true), _desiredFPS(60), _measuredFPS(0.0), _deltaTime(0)
 {
 }
 
@@ -46,9 +46,6 @@ void Framework::init(const char * app_name)
 
 Framework::~Framework(){
 	INFO("Application shutdown...");
-
-	// free fps text view
-	delete _FPSView;
 
 	// free default fonts
 	Font::freeDefaultFonts();	
@@ -180,14 +177,6 @@ bool Framework::createWindow(int window_w, int window_h, int multisamples, bool 
 	INFO("-> Compiling default shader.\n");
 	Shader::initDefaultShaders();
 
-	// create FPS text view
-	/*
-	_FPSView = new TextView(Font::getDefault(false), Font::SMALL, 3);
-	_FPSView->setText("0");
-	_FPSView->setAlignment(1, -1, 5);
-	_FPSView->setColor(Color::GREEN);
-	*/
-
 	if(multisamples > 0){
 		glEnable(GL_MULTISAMPLE);
 	}
@@ -222,8 +211,17 @@ void Framework::run(Application * app)
 					if(e.window.event == SDL_WINDOWEVENT_RESIZED){
 					_windowW = e.window.data1;
 					_windowH = e.window.data2;
-					glViewport(0, 0, _windowW, _windowH);
-					app->eventWindowResized(_windowW, _windowH);
+
+					if(_viewportMode == VIEW_NORMAL){
+						glViewport(0, 0, _windowW, _windowH);
+					}
+					else if(_viewportMode == VIEW_VSPLIT){
+						app->eventWindowResized(_windowW/2, _windowH);
+					}
+					else{
+						app->eventWindowResized(_windowW, _windowH/2);
+					}
+					_renderRequest = true;
 					}
 				}break;
 				case SDL_KEYUP:
@@ -249,33 +247,38 @@ void Framework::run(Application * app)
 			return;
 
 		// rendering
-		glClear(_clearMask);
-		app->render();
-
-		// show frame counter
-		if(_showFPS){
-			setRenderMode(RenderMode::SCREEN_TEXT);
-			Rect window_rect;
-			getWindowRect(window_rect);
-			if(_FPSView){
-				_FPSView->setAlignBox(window_rect);
-				_FPSView->align();
-				_FPSView->render();
+		if(!_renderOnChange || _renderRequest){
+			glClear(_clearMask);
+			switch(_viewportMode){
+			case VIEW_VSPLIT:
+				glViewport(0,0, _windowW/2, _windowH);
+				app->render(1);
+				glViewport(_windowW/2, 0, _windowW/2, _windowH);
+				app->render(2);
+				glClear(GL_DEPTH_BUFFER_BIT);
+			break;
+			case VIEW_HSPLIT:
+				glViewport(0,0, _windowW, _windowH/2);
+				app->render(1);
+				glViewport(0, _windowH/2, _windowW, _windowH/2);
+				app->render(2);
+				glClear(GL_DEPTH_BUFFER_BIT);
+			break;
 			}
+			glViewport(0, 0, _windowW, _windowH);
+			app->render(0);
+
+			// swap buffer
+			SDL_GL_SwapWindow(_mainWindow);
+
+			_renderRequest = false;
 		}
-
-		// swap buffer
-		SDL_GL_SwapWindow(_mainWindow);
-
 		// const fps delay
 		Uint32 render_time = SDL_GetTicks()-last_ticks;
 		int frametime = 1000/_desiredFPS;
 		int delay = frametime-render_time;
 		if(delay > 0)
 			SDL_Delay((Uint32)delay);
-		
-		// update of base class
-		app->baseUpdate();
 
 		_frameCount++;
 
@@ -284,16 +287,12 @@ void Framework::run(Application * app)
 		{
 			_measuredFPS = _frameCount*1000.0f/(ticks_now-_lastFrameMeasureTime);
 			_lastFrameMeasureTime = ticks_now;
-			if(_FPSView){
-				char buffer[16];
-				sprintf(buffer, "%d", static_cast<int>(round(_measuredFPS)));
-				_FPSView->setText(buffer);
-			}
 			_frameCount = 0;
 		}
 
 		// calculate delta time of last frame
 		_deltaTime = SDL_GetTicks() - last_ticks;
+
 	}
 }
 
@@ -346,5 +345,18 @@ void Framework::setRenderMode(RenderMode mode, Shader * shader)
 		}break;
 		default:{
 		}
+	}
+}
+
+float Framework::getViewportAspectWH()
+{
+	switch(_viewportMode){
+	default:
+	case VIEW_NORMAL:
+		return getWindowAspectWH();
+	case VIEW_VSPLIT:
+		return (static_cast<float>(_windowW)/_windowH)/2.0f;
+	case VIEW_HSPLIT:
+		return (static_cast<float>(_windowW)/_windowH)*2.0f;
 	}
 }

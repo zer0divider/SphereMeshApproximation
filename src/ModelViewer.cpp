@@ -17,7 +17,7 @@
 #define TRIANGLE_COLOR         0xa0a0efFF
 #define MIN_CYLINDER_RADIUS    0.001
 #define LINE_WIDTH             1
-#define NUM_SEGMENTS           32         /* number of segments (aka smoothness) used for rendering spheres and cylinders in sphere mesh */
+#define NUM_SEGMENTS           64         /* number of segments (aka smoothness) used for rendering spheres and cylinders in sphere mesh */
 #define KEY_MODE_SWITCH        SDLK_m
 /*****************/
 
@@ -44,13 +44,17 @@ bool ModelViewer::init(const std::string & model_file)
 	_meshShader.use();
 	_meshShader.setLightDir(Vector3D(1.0, 1.5, 1.3).getNormalized());
 
+	// separator line
+	float line_data[4] = {0,1,  0,-1};
+	_separatorMesh.set2D(line_data, 2, Mesh::ONLY_POSITION, GL_LINES);
+
 	// loading obj
 	std::vector<Vector3D> vertex_data;
 	std::vector<unsigned int> index_data;
 	INFO("Loading mesh from '%s'...", _modelFilename.c_str());
-	if(_faceMesh.loadOBJFromFile(_modelFilename.c_str(), Mesh::NORMAL, &vertex_data, &index_data)){
-		INFO("  -> #vertices: %d", _faceMesh.getVertexCount());
-		INFO("  -> #triangles: %d", _faceMesh.getElementCount()/3);
+	if(_originalMesh.loadOBJFromFile(_modelFilename.c_str(), Mesh::NORMAL, &vertex_data, &index_data)){
+		INFO("  -> #vertices: %d", _originalMesh.getVertexCount());
+		INFO("  -> #triangles: %d", _originalMesh.getElementCount()/3);
 		INFO(" ");
 	}
 	else{
@@ -68,7 +72,7 @@ bool ModelViewer::init(const std::string & model_file)
 	INFO("   Done, took %.2f seconds\n", (t2-t)/1000.f);
 
 	// run full Approximation Algorithm
-	int num_spheres = 40;
+	int num_spheres = 20;
 	INFO("-> Running Sphere Mesh Approximation Algorithm (reducing to %d spheres) ...", num_spheres);
 	t = SDL_GetTicks();
 	_dynamicMesh.sphereApproximation(num_spheres);
@@ -93,7 +97,13 @@ bool ModelViewer::init(const std::string & model_file)
 		 _dynamicMesh.getFaceList().getSize());
 
 	// set initial draw mode
-	setDrawMode(FILL_AND_LINE);
+	setDrawMode(FILL);
+
+	// draw only on change
+	FW->setRenderOnlyOnChange(true);
+
+	// left/right split view
+	FW->setViewportMode(Framework::VIEW_VSPLIT);
 
 	return true;
 }
@@ -102,16 +112,30 @@ ModelViewer::~ModelViewer()
 {
 }
 
-void ModelViewer::render()
+void ModelViewer::render(int viewport)
 {
-	/* update camera */
-	_camera.upload();
-	
-	/* draw model */
-	//drawMesh();
 
-	/* draw sphere mesh */
-	drawSphereMesh();
+	/* draw depending on viewport */
+	if(viewport == 0){ // complete window
+		// draw separator line
+		SHADER->setProjectionMatrix(Matrix4::IDENTITY);
+		SHADER->setViewMatrix(Matrix4::IDENTITY);
+		SHADER->setModelMatrix(Matrix4::IDENTITY);
+		SHADER->setColor(Color::BLACK);
+		_meshShader.setLightMode(DiffuseShader::UNSHADED);
+		_separatorMesh.bind();
+		_separatorMesh.draw();
+	}
+	else{
+		SHADER->setProjectionMatrix(_projectionMat);
+		_camera.upload();
+
+		if(viewport == 1){// left
+			drawMesh();
+		} else { // right
+			drawSphereMesh();
+		}
+	}
 }
 
 void ModelViewer::drawSphereMesh(){
@@ -128,32 +152,33 @@ void ModelViewer::drawMesh()
 	glLineWidth(LINE_WIDTH);
 	glDisable(GL_CULL_FACE);
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+	_originalMesh.bind();
 	switch(_currentDrawMode){
 	case FILL:{
-		_faceMesh.bind();
 		_meshShader.setLightMode(DiffuseShader::MATCAP);
 		SHADER->setColor(_meshFillColor);
-		_faceMesh.draw();
+		_originalMesh.draw();
 	}break;
 	case LINE:{
-		_edgeMesh.bind();
 		_meshShader.setLightMode(DiffuseShader::UNSHADED);
 		SHADER->setColor(_meshLineColor);
-		_edgeMesh.draw();
+		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+		_originalMesh.draw();
+		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	}break;
 	case FILL_AND_LINE:{
-		_faceMesh.bind();
 		_meshShader.setLightMode(DiffuseShader::MATCAP);
 		// draw fill
 		SHADER->setColor(_meshFillColor);
-		_faceMesh.draw();
+		_originalMesh.draw();
 
 		// draw line on top
 		_meshShader.setNormalOffset(0.001);
 		_meshShader.setLightMode(DiffuseShader::UNSHADED);
 		SHADER->setColor(_meshLineColor);
-		_edgeMesh.bind();
-		_edgeMesh.draw();
+		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+		_originalMesh.draw();
+		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 		_meshShader.setNormalOffset(0);
 	}break;
 	}
@@ -172,25 +197,6 @@ void ModelViewer::eventKeyboard(SDL_Keycode key, bool pressed, int repeat)
 			setDrawMode(m);
 		}break;
 		case SDLK_SPACE:{
-		}break;
-		case SDLK_RIGHT:
-		case SDLK_LEFT:{
-			if(_selectedEdge != nullptr){
-				DynamicMesh::Edge * next_edge;
-				if(key == SDLK_RIGHT){
-					next_edge = _selectedEdge->getNext();
-					if(next_edge == nullptr){
-						next_edge = _dynamicMesh.getEdgeList().getFirst();
-					}
-				}
-				else if(key == SDLK_LEFT){
-					next_edge = _selectedEdge->getPrev();
-					if(next_edge == nullptr){
-						next_edge = _dynamicMesh.getEdgeList().getLast();
-					}
-				}
-				selectEdge(next_edge);
-			}
 		}break;
 		}
 	}
@@ -213,31 +219,33 @@ void ModelViewer::eventMouseMotion(int x, int y, int rel_x, int rel_y)
 	Uint8 state = SDL_GetMouseState(NULL, NULL);
 	if(state & SDL_BUTTON_LMASK){
 		_camera.mouseRotate(rel_x, rel_y);
+		FW->renderRequest();
 	}
 	else if(state & SDL_BUTTON_RMASK){
 		_camera.mouseTranslate(rel_x, rel_y);
+		FW->renderRequest();
 	}
 }
 
 void ModelViewer::eventMouseWheel(int wheel_x, int wheel_y)
 {
 	_camera.mouseZoom(wheel_y);
+	FW->renderRequest();
 }
 
 void ModelViewer::eventWindowResized(int new_width, int new_height)
 {
 	// update projection matrix
-	_projectionMat.setPerspectiveY(CAMERA_FOV, FW->getWindowAspectWH(), 0.1, 1000);
-	SHADER->setProjectionMatrix(_projectionMat);
+	_projectionMat.setPerspectiveY(CAMERA_FOV, FW->getViewportAspectWH(), 0.1, 1000);
 }
 
 void ModelViewer::setDrawMode(DrawMode mode)
 {
 	_currentDrawMode = mode;
+	FW->renderRequest();
 }
 
 bool ModelViewer::update()
 {
-
 	return true;
 }

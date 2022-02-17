@@ -83,6 +83,13 @@ namespace zer0{
 			void set3D(const float * data, size_t num_verts, unsigned char components, GLenum draw_mode);
 
 			/**
+			 * set from 2D vertex data
+			 * the data is thightly packed position/normal/uv data depending on what components are specified
+			 * NOTE: normals still have 3 components
+			 */
+			void set2D(const float * data, size_t num_verts, unsigned char components, GLenum draw_mode);
+
+			/**
 			 * set from indexed 3D vertex data (uses element buffer)
 			 * @param vertex_data is the same as param data in set3D()
 			 */

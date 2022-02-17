@@ -304,6 +304,28 @@ void Mesh::set3D(const float * data, size_t num_verts, unsigned char components,
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
+void Mesh::set2D(const float * data, size_t num_verts, unsigned char components, GLenum draw_mode)
+{
+	// common mistake: passing GL_LINE instead of GL_LINES
+	assert(draw_mode != GL_LINE);
+	clear();
+	_drawMode = draw_mode;
+	_flags = components;
+	_vertexCount = num_verts;
+	_numDimensions = 2;
+	glGenBuffers(1, &_buffer);
+	glBindBuffer(GL_ARRAY_BUFFER, _buffer);
+	int num_floats_per_vertex = 2;
+	if(_flags & NORMAL){
+		num_floats_per_vertex += 3;
+	}
+	if(_flags & UV){
+		num_floats_per_vertex += 2;
+	}
+	glBufferData(GL_ARRAY_BUFFER, sizeof(float)*num_floats_per_vertex*num_verts, data, GL_STATIC_DRAW);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+}
+
 void Mesh::set3DIndexed(const float * vertex_data, size_t num_verts, const unsigned int * index_data, size_t num_indices, unsigned char components, GLenum draw_mode)
 {
 	set3D(vertex_data, num_verts, components, draw_mode);

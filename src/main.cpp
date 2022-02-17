@@ -36,7 +36,7 @@ int main(int argc, char ** argv){
 	auto cmd_window_h = cmd.addArg<int>(
 		"window-h", '\0',
 		"Set window height in pixels.",
-		600
+		400
 	);
 
 	auto cmd_model = cmd.addArg<std::string>(
