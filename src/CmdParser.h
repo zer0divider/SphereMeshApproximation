@@ -29,6 +29,7 @@ protected:
 	std::string _description;
 	std::string _fullArg;
 	std::string _singleCharArg;
+	bool _isSet;
 	CmdArgBase(CmdArgType t):_type(t){}
 };
 

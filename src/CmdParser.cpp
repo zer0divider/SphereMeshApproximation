@@ -30,12 +30,21 @@ void CmdParser::addArgBase(CmdArgBase* base, const std::string& full_arg, char s
 
 CmdParser::Result CmdParser::parse(int argc, char ** argv)
 {
+	// set all arguments to not set
+	for(auto i : _argList){
+		i->_isSet = false;
+	}
 	int i = 1;
 	while(i < argc){
 		std::string a = std::string(argv[i]);
 		auto iter = _argMap.find(a);
 		if(iter != _argMap.end()){
-			const CmdArgBase * base = &(*iter).second;
+			CmdArgBase * base = &(*iter).second;
+			if(base->_isSet){
+				_lastError = std::string("Argument ") + a + std::string(" was given multiple times.");
+				return ERROR;
+			}
+			base->_isSet = true;
 			std::string value;
 			std::string err_for_arg = std::string(" for argument '") + a + std::string("'.");
 			if(i < argc-1){
@@ -94,6 +103,15 @@ CmdParser::Result CmdParser::parse(int argc, char ** argv)
 			return ERROR;
 		}
 		i++;
+	}
+
+	// check if all required have been set
+	for(const auto i : _argList){
+		if((i->_options & REQUIRED) && !i->_isSet){// argument required but not set
+			_lastError = std::string("Required argument '") + i->_fullArg
+						+ std::string("' was not specified. Type '") + argv[0] + std::string(" --help' for help."); 
+			return ERROR;
+		}
 	}
 	return OK;
 }

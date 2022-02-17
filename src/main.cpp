@@ -43,18 +43,19 @@ int main(int argc, char ** argv){
 		"obj", 'o',
 		".obj model to load from file.",
 		"data/cube.obj",
-		CmdParser::IS_FILE
+		CmdParser::IS_FILE | CmdParser::REQUIRED
 	);
 
 	auto cmd_spheres = cmd.addArg<int>(
 		"spheres", 's',
-		"number of spheres to reduce model to",
+		"Number of spheres to reduce model to",
 		20
 	);
 
 	cmd.addHelp();
 	CmdParser::Result r = cmd.parse(argc, argv);
 	if(r == CmdParser::HELP){
+		std::cout<<"Basic usage: "<<argv[0]<<" -o <obj> -s <num_spheres>"<<std::endl;
 		std::cout<<cmd.getHelpString()<<std::endl;
 		return 0;
 	}else if(r == CmdParser::ERROR){
