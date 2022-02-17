@@ -7,14 +7,16 @@
 #include "DiffuseShader.h"
 #include "DynamicMesh.h"
 #include "SphereMesh.h"
+#include "ModeSwitcher.h"
 
 class ModelViewer : public zer0::Application
 {
 public:
 	enum DrawMode{FILL, LINE, FILL_AND_LINE, NUM_DRAW_MODES};
+	enum SphereDrawMode{SAME_COLOR, DIFFERENT_COLOR, SKELETON, NUM_SPHERE_DRAW_MODES};
 
 	/* initialize */
-	bool init(const std::string & model_file);
+	bool init(const std::string & model_file, int num_spheres);
 
 	ModelViewer();
 	~ModelViewer();
@@ -26,16 +28,21 @@ public:
 	void eventWindowResized(int new_width, int new_height)override;
 
 private:
+	void drawSeparator(); // draw line dividing left/right view
 	void drawMesh();
 	void drawSphereMesh();
-	void setDrawMode(DrawMode mode);
 	void selectEdge(DynamicMesh::Edge * e);
+	void updateSphereMeshModel();
+	void printSphereMeshInfo();
+	void setModelCenterPosition(); // set model matrix in shader
+	void updateSphereMeshColors();
 
 	zer0::Mesh _originalMesh;
 	zer0::Mesh _faceMesh;
 	zer0::Mesh _edgeMesh;
 	zer0::Mesh _selectedEdgeMesh;
 	zer0::Mesh _selectedEdgeFacesMesh;
+	zer0::Mesh _separatorMesh; // line dividing left/right view
 	
 	SphereMesh _sphereMesh;
 	std::string _modelFilename;
@@ -44,11 +51,13 @@ private:
 	zer0::Camera _camera;
 	zer0::Color _meshFillColor;
 	zer0::Color _meshLineColor;
-	DrawMode _currentDrawMode;
+	zer0::Color _separatorLineColor;
+	ModeSwitcher<DrawMode>       _meshDrawMode;
+	ModeSwitcher<SphereDrawMode> _sphereDrawMode;
 	DiffuseShader _meshShader;
 	zer0::Matrix4 _projectionMat;
 
-	zer0::Mesh _separatorMesh;
+	zer0::Vector3D _modelCenterPosition;
 };
 
 #endif

@@ -64,16 +64,16 @@ void Mesh::loadPrimitive(Primitive p, const Vector3D & dim, int segments, bool s
 				segments = 2;
 			}
 			_vertexCount = 2*segments*(segments-1) + 2;
-			assert(_vertexCount <= 65535);// if this assertion triggers, change _elementType from GL_UNSIGNED_SHORT to GL_UNSIGNED_INT
+
 			GLsizei value_count = _vertexCount*6;
 			total_vertex_size = sizeof(float)*value_count;
 			vertices = new float[value_count];
 			_elementCount = 2*2*3*segments + (segments-2)*2*segments*6;
-			total_index_size = sizeof(GLushort)*_elementCount;
 			_flags = NORMAL;
-			_elementType = GL_UNSIGNED_SHORT;
-			indices = (GLubyte*) new GLushort[_elementCount];
-			GLushort * s_indices = (GLushort*)indices;
+			total_index_size = sizeof(GLuint)*_elementCount;
+			_elementType = GL_UNSIGNED_INT;
+			indices = (GLubyte*) new GLuint[_elementCount];
+			GLuint * s_indices = (GLuint*)indices;
 			float last_polar = 0.f;
 			float next_polar = 0.f;
 			float angle_per_i = M_PI/segments;

@@ -38,6 +38,7 @@ static const char * FRAGMENT_SOURCE =
 "       gl_FragColor = vec4((ambient_light + l)*out_color.rgb, out_color.a);\n"
 "   }else if(light_enabled == 2){\n"
 "		float f = normalize(out_screen_normal).z;\n"
+"       if(f < 0){f = -f;}\n"
 "       gl_FragColor = vec4(out_color.rgb*f, out_color.a);\n"
 "   }\n"
 "   else{\n"

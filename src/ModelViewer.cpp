@@ -1,24 +1,26 @@
 /* Author: Cornelius Marx
  */
 #include "ModelViewer.h"
-
 /* configuration */
 #define CAMERA_ROTATION_FACTOR  0.005
 #define CAMERA_TRANSLATE_FACTOR 0.001
-#define CAMERA_ZOOM_FACTOR     1.1
-#define CAMERA_FOV             70
-#define BACKGROUND_COLOR       0x303030FF
-#define MESH_FILL_COLOR        0x2c92ffFF
-#define MESH_LINE_COLOR        0xF0F0F0FF
-#define SPHERE_COLOR           0xff922cFF
-#define MIN_SPHERE_RADIUS      0.001
-#define CYLINDER_COLOR         0xa0a0a0FF
-#define CYLINDER_RADIUS_OFFSET 0.002
-#define TRIANGLE_COLOR         0xa0a0efFF
-#define MIN_CYLINDER_RADIUS    0.001
-#define LINE_WIDTH             1
-#define NUM_SEGMENTS           64         /* number of segments (aka smoothness) used for rendering spheres and cylinders in sphere mesh */
-#define KEY_MODE_SWITCH        SDLK_m
+#define CAMERA_ZOOM_FACTOR      1.1
+#define CAMERA_FOV              70
+#define BACKGROUND_COLOR        0x303030FF
+#define MESH_FILL_COLOR         0x2c92ffFF
+#define MESH_LINE_COLOR         0xD0F0FFFF
+#define SPHERE_COLOR            0xff922cFF
+#define MIN_SPHERE_RADIUS       0.001
+#define SPHERE_RADIUS_OFFSET    0.0008
+#define CYLINDER_COLOR          0xa0a0a0FF
+#define TRIANGLE_COLOR          0xa0a0efFF
+#define MIN_CYLINDER_RADIUS     0.001
+#define LINE_WIDTH              1
+#define NUM_SEGMENTS            64    /* number of segments (aka smoothness) used for rendering spheres and cylinders in sphere mesh */
+#define KEY_MODE_SWITCH         SDLK_a
+#define KEY_SPHERE_MODE_SWITCH  SDLK_d
+#define SEPARATOR_LINE_WIDTH    2
+#define SEPARATOR_LINE_COLOR    0x202020FF 
 /*****************/
 
 using namespace zer0;
@@ -26,11 +28,15 @@ using namespace zer0;
 ModelViewer::ModelViewer():
 	_camera(CAMERA_ROTATION_FACTOR, CAMERA_ZOOM_FACTOR, CAMERA_TRANSLATE_FACTOR),
 	_meshFillColor(MESH_FILL_COLOR),
-	_meshLineColor(MESH_LINE_COLOR)
+	_meshLineColor(MESH_LINE_COLOR),
+	_separatorLineColor(SEPARATOR_LINE_COLOR),
+	_meshDrawMode(FILL, NUM_DRAW_MODES),
+	_sphereDrawMode(SAME_COLOR, NUM_SPHERE_DRAW_MODES),
+	_sphereMesh(SPHERE_RADIUS_OFFSET)
 {
 }
 
-bool ModelViewer::init(const std::string & model_file)
+bool ModelViewer::init(const std::string & model_file, int num_spheres)
 {
 	_modelFilename = model_file;
 	// opengl configuration
@@ -63,47 +69,37 @@ bool ModelViewer::init(const std::string & model_file)
 
 	_dynamicMesh.set(vertex_data, index_data);
 
+	_modelCenterPosition = _dynamicMesh.getCenterPos();
+	_sphereMesh.setPosition(-_modelCenterPosition);
 
 	// initialize SQEM of each vertex
 	INFO("-> Initializing SQEM...");
 	Uint32 t = SDL_GetTicks();
 	_dynamicMesh.initSQEM();
 	Uint32 t2 = SDL_GetTicks();
-	INFO("   Done, took %.2f seconds\n", (t2-t)/1000.f);
+	INFO("   Done, took %.3f seconds\n", (t2-t)/1000.f);
 
 	// run full Approximation Algorithm
-	int num_spheres = 20;
 	INFO("-> Running Sphere Mesh Approximation Algorithm (reducing to %d spheres) ...", num_spheres);
 	t = SDL_GetTicks();
 	_dynamicMesh.sphereApproximation(num_spheres);
-	INFO("   Done, took %.2f seconds.\n", (SDL_GetTicks()-t)/1000.f);
-
+	INFO("   Done, took %.3f seconds.\n", (SDL_GetTicks()-t)/1000.f);
 
 	// create sphere mesh
 	INFO("-> Uploading mesh...");
 	t = SDL_GetTicks();
-	_dynamicMesh.upload(_faceMesh, _edgeMesh);
-	_sphereMesh.init(_dynamicMesh, NUM_SEGMENTS, MIN_SPHERE_RADIUS, CYLINDER_RADIUS_OFFSET, MIN_CYLINDER_RADIUS);
-	INFO("   Done, took %.2f seconds.\n", (SDL_GetTicks()-t)/1000.f);
-	_sphereMesh.setColors(zer0::Color(SPHERE_COLOR), zer0::Color(CYLINDER_COLOR), zer0::Color(TRIANGLE_COLOR));
-	_sphereMesh.setPosition(-_dynamicMesh.getCenterPos());
+	updateSphereMeshModel();
+	INFO("   Done, took %.3f seconds.\n", (SDL_GetTicks()-t)/1000.f);
 
-	INFO("Final Sphere Mesh:\n"
-	     "  -> #spheres/vertices: %lu\n"
-	     "  -> #edges:            %lu\n"
-	     "  -> #faces:            %lu\n",
-		 _dynamicMesh.getVertexList().getSize(),
-		 _dynamicMesh.getEdgeList().getSize(),
-		 _dynamicMesh.getFaceList().getSize());
-
-	// set initial draw mode
-	setDrawMode(FILL);
+	printSphereMeshInfo();
 
 	// draw only on change
 	FW->setRenderOnlyOnChange(true);
 
 	// left/right split view
 	FW->setViewportMode(Framework::VIEW_VSPLIT);
+
+	updateSphereMeshColors();
 
 	return true;
 }
@@ -112,19 +108,42 @@ ModelViewer::~ModelViewer()
 {
 }
 
+void ModelViewer::printSphereMeshInfo()
+{
+	INFO("Sphere Mesh:\n"
+	     "  -> #spheres/vertices: %lu\n"
+	     "  -> #edges:            %lu\n"
+	     "  -> #faces:            %lu\n",
+		 _dynamicMesh.getVertexList().getSize(),
+		 _dynamicMesh.getEdgeList().getSize(),
+		 _dynamicMesh.getFaceList().getSize());
+}
+
+void ModelViewer::updateSphereMeshModel()
+{
+	_dynamicMesh.upload(_faceMesh, _edgeMesh);
+	_sphereMesh.init(_dynamicMesh, NUM_SEGMENTS, MIN_SPHERE_RADIUS, MIN_CYLINDER_RADIUS);
+}
+
+void ModelViewer::updateSphereMeshColors()
+{
+	if(_sphereDrawMode == DIFFERENT_COLOR){
+		_sphereMesh.setColors(zer0::Color(SPHERE_COLOR), zer0::Color(CYLINDER_COLOR), zer0::Color(TRIANGLE_COLOR));
+	}
+	else{
+		_sphereMesh.setColors(zer0::Color(SPHERE_COLOR), zer0::Color(SPHERE_COLOR), zer0::Color(SPHERE_COLOR));
+	}
+}
+
 void ModelViewer::render(int viewport)
 {
 
 	/* draw depending on viewport */
 	if(viewport == 0){ // complete window
-		// draw separator line
 		SHADER->setProjectionMatrix(Matrix4::IDENTITY);
 		SHADER->setViewMatrix(Matrix4::IDENTITY);
 		SHADER->setModelMatrix(Matrix4::IDENTITY);
-		SHADER->setColor(Color::BLACK);
-		_meshShader.setLightMode(DiffuseShader::UNSHADED);
-		_separatorMesh.bind();
-		_separatorMesh.draw();
+		drawSeparator();
 	}
 	else{
 		SHADER->setProjectionMatrix(_projectionMat);
@@ -138,22 +157,40 @@ void ModelViewer::render(int viewport)
 	}
 }
 
+void ModelViewer::setModelCenterPosition()
+{
+	Matrix4 m;
+	m.setTranslation(-_modelCenterPosition);
+	SHADER->setModelMatrix(m);
+}
+
 void ModelViewer::drawSphereMesh(){
 	_meshShader.setLightMode(DiffuseShader::MATCAP);
-	_sphereMesh.draw();
+	if(_sphereDrawMode == SKELETON){
+		_sphereMesh.drawSpheres();
+		SHADER->setColor(Color(MESH_FILL_COLOR));
+		setModelCenterPosition();
+		_faceMesh.bind();
+		_faceMesh.draw();
+
+		_meshShader.setLightMode(DiffuseShader::UNSHADED);
+		SHADER->setColor(Color(MESH_LINE_COLOR));
+		_edgeMesh.bind();
+		_edgeMesh.draw();
+	}
+	else{ // draw underlying skeleton + spheres
+		_sphereMesh.draw();
+	}
 }
 
 void ModelViewer::drawMesh()
 {
-	Matrix4 m;
-	m.setTranslation(-_dynamicMesh.getCenterPos());
-	SHADER->setModelMatrix(m);
-	
+	setModelCenterPosition();
 	glLineWidth(LINE_WIDTH);
 	glDisable(GL_CULL_FACE);
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	_originalMesh.bind();
-	switch(_currentDrawMode){
+	switch(_meshDrawMode.get()){
 	case FILL:{
 		_meshShader.setLightMode(DiffuseShader::MATCAP);
 		SHADER->setColor(_meshFillColor);
@@ -185,18 +222,35 @@ void ModelViewer::drawMesh()
 
 }
 
+void ModelViewer::drawSeparator()
+{
+	// draw separator line
+	SHADER->setColor(_separatorLineColor);
+	_meshShader.setLightMode(DiffuseShader::UNSHADED);
+	glLineWidth(SEPARATOR_LINE_WIDTH);
+	_separatorMesh.bind();
+	_separatorMesh.draw();
+	glLineWidth(1);
+}
+
 void ModelViewer::eventKeyboard(SDL_Keycode key, bool pressed, int repeat)
 {
 	if(repeat == 0 && pressed){// hot keys
 		switch(key){
 		case KEY_MODE_SWITCH:{
-			DrawMode m = (DrawMode)(_currentDrawMode +1);
-			if(m >= NUM_DRAW_MODES){
-				m = (DrawMode)0;
-			}
-			setDrawMode(m);
+			_meshDrawMode.next();
+			FW->renderRequest();
+		}break;
+		case KEY_SPHERE_MODE_SWITCH:{
+			_sphereDrawMode.next();
+			updateSphereMeshColors();
+			FW->renderRequest();
 		}break;
 		case SDLK_SPACE:{
+			_dynamicMesh.sphereApproximationStep();
+			updateSphereMeshModel();
+			printSphereMeshInfo();
+			FW->renderRequest();
 		}break;
 		}
 	}
@@ -236,13 +290,7 @@ void ModelViewer::eventMouseWheel(int wheel_x, int wheel_y)
 void ModelViewer::eventWindowResized(int new_width, int new_height)
 {
 	// update projection matrix
-	_projectionMat.setPerspectiveY(CAMERA_FOV, FW->getViewportAspectWH(), 0.1, 1000);
-}
-
-void ModelViewer::setDrawMode(DrawMode mode)
-{
-	_currentDrawMode = mode;
-	FW->renderRequest();
+	_projectionMat.setPerspectiveY(CAMERA_FOV, FW->getViewportAspectWH(), 0.1, 100);
 }
 
 bool ModelViewer::update()

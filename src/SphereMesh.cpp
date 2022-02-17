@@ -2,7 +2,8 @@
 
 using namespace zer0;
 
-SphereMesh::SphereMesh(): _sphereColor(Color::WHITE), _cylinderColor(Color::WHITE), _triangleColor(Color::WHITE)
+SphereMesh::SphereMesh(float sphere_radius_offset): _sphereColor(Color::WHITE), _cylinderColor(Color::WHITE), _triangleColor(Color::WHITE),
+							 _sphereRadiusOffset(sphere_radius_offset)
 {
 }
 
@@ -14,7 +15,7 @@ void SphereMesh::clear()
 	_trianglesMesh.clear();
 }
 
-void SphereMesh::init(const DynamicMesh & m, int num_segments, float min_sphere_radius, float cylinder_radius_offset, float min_cylinder_radius)
+void SphereMesh::init(const DynamicMesh & m, int num_segments, float min_sphere_radius, float min_cylinder_radius)
 {
 	// creating single sphere
 	_sphereMesh.loadPrimitive(Mesh::SPHERE, Vector3D(2,2,2), num_segments);
@@ -187,26 +188,42 @@ void SphereMesh::init(const DynamicMesh & m, int num_segments, float min_sphere_
 
 void SphereMesh::draw()
 {
+	drawSpheres();
+	drawCylinders();
+	drawTriangles();
+}
+
+void SphereMesh::drawSpheres()
+{
+	Matrix4 m;
 	// draw spheres
 	SHADER->setColor(_sphereColor);
 	_sphereMesh.bind();
-	Matrix4 m;
 	for(const Vector4D & v : _spheres){
-			m.setTransform(_position + v.getVector3D(), v.w, Vector3D_zer0);
+			m.setTransform(_position + v.getVector3D(), v.w-_sphereRadiusOffset, Vector3D_zer0);
 			SHADER->setModelMatrix(m);
 			_sphereMesh.draw();
 	}
+}
 
+void SphereMesh::drawCylinders()
+{
+	Matrix4 m;
 	m.setTranslation(_position);
 	SHADER->setModelMatrix(m);
-
 	// draw cylinders
 	SHADER->setColor(_cylinderColor);
 	for(size_t i = 0; i < _cylinderMeshes.size(); i++){
 		_cylinderMeshes[i].bind();
 		_cylinderMeshes[i].draw();
 	}
+}
 
+void SphereMesh::drawTriangles()
+{
+	Matrix4 m;
+	m.setTranslation(_position);
+	SHADER->setModelMatrix(m);
 	// draw triangles
 	SHADER->setColor(_triangleColor);
 	_trianglesMesh.bind();

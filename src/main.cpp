@@ -46,6 +46,12 @@ int main(int argc, char ** argv){
 		CmdParser::IS_FILE
 	);
 
+	auto cmd_spheres = cmd.addArg<int>(
+		"spheres", 's',
+		"number of spheres to reduce model to",
+		20
+	);
+
 	cmd.addHelp();
 	CmdParser::Result r = cmd.parse(argc, argv);
 	if(r == CmdParser::HELP){
@@ -73,7 +79,7 @@ int main(int argc, char ** argv){
 
 	/* creating and run main application */
 	ModelViewer * app = new ModelViewer();
-	if(app->init(cmd_model->getValue())){
+	if(app->init(cmd_model->getValue(), cmd_spheres->getValue())){
 		zer0::FW->run(app);
 	}
 	else{

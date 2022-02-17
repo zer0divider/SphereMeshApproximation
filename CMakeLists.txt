@@ -23,6 +23,7 @@ set(PROJECT_SOURCES
 	BackReferenceList.h
 	SphereMesh.cpp
 	SphereMesh.h
+	ModeSwitcher.h
 )
 
 # add source folder prefix
