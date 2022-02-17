@@ -1,6 +1,6 @@
 # cmake build type, set to Debug or Release
 TYPE?=Debug
-LOAD_OBJ?="./data/stanford_bunny.obj"
+LOAD_OBJ?="./models/stanford_bunny.obj"
 EXEC=./build/sphere_mesh -o $(LOAD_OBJ) -s 15
 
 CMAKE_FLAGS=-DCMAKE_BUILD_TYPE=$(TYPE)
