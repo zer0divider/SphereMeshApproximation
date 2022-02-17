@@ -30,7 +30,7 @@ Use the key **A** to switch the display mode of the original mesh (left) and the
 
 ## Supported 3D-Model Files
 Only wavefront `.obj` files are supported.
-The mesh must be triangulated and should have normals. The file can contain UV coordinates but they will be discarded. If your unsure, take a look at the example models in the `data/` folder.
+The mesh must be triangulated and should have normals. The file can contain UV coordinates but they will be discarded. If you're unsure, take a look at the example models in the `models/` folder.
 
 ## Commandline Arguments
 Here is a list of all commandline arguments:
