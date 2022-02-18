@@ -81,10 +81,18 @@ namespace zer0{
 			 * @param window_w Width of the window in px
 			 * @param window_h Height of the window in px
 			 * @param multisamples Number of multisamples for rendering (e.g. 2, 4, 8, 16). If set to 0 multisampling will be disabled.
+			 * @param vsync activate vertical synchronization
+			 * @param fullscreen start window in fullscreen mode
+			 * @param hidden start window hidden, use showWindow() to show window
 			 * @return True on success, false on error.
 			 */
 			bool createWindow(int window_w = 800, int window_h = 600, int multisamples = 0,
-								bool fullscreen = false, bool vsync = false);
+								bool fullscreen = false, bool vsync = false, bool hidden = false);
+
+			/**
+			 * show the window when hidden=true was passed to createWindow()
+			 */
+			void showWindow();
 
 			/**
 			 * Running main loop with callbacks to given application.

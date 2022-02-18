@@ -93,6 +93,9 @@ bool ModelViewer::init(const std::string & model_file, int num_spheres)
 
 	printSphereMeshInfo();
 
+	// show window now that we are done (window was created with hidden flag)
+	FW->showWindow();
+
 	// draw only on change
 	FW->setRenderOnlyOnChange(true);
 

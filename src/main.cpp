@@ -72,7 +72,7 @@ int main(int argc, char ** argv){
 		cmd_window_h->getValue(),
 		cmd_msaa->getValue(),
 		cmd_fullscreen->getValue(),
-		cmd_vsync->getValue()))
+		cmd_vsync->getValue(), true))
 	{
 		zer0::ERROR("Window creation failed!");
 		return 2;

@@ -54,7 +54,7 @@ Framework::~Framework(){
 	SDL_Quit();
 }
 
-bool Framework::createWindow(int window_w, int window_h, int multisamples, bool fullscreen, bool vsync)
+bool Framework::createWindow(int window_w, int window_h, int multisamples, bool fullscreen, bool vsync, bool hidden)
 {
 	unsigned int sdl_flags = SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE;
 	//getting current screen resolution if fullscreen activated
@@ -96,6 +96,9 @@ bool Framework::createWindow(int window_w, int window_h, int multisamples, bool 
 	if(multisamples > 0){
 		SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 1);
 		SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, multisamples);
+	}
+	if(hidden){
+		sdl_flags |= SDL_WINDOW_HIDDEN;
 	}
 	_mainWindow = SDL_CreateWindow(CONFIG.APP_NAME.c_str(), SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, _windowW, _windowH, sdl_flags);
 		
@@ -182,6 +185,11 @@ bool Framework::createWindow(int window_w, int window_h, int multisamples, bool 
 	setRenderMode(RenderMode::WORLD_3D);
 
 	return true;
+}
+
+void Framework::showWindow()
+{
+	SDL_ShowWindow(_mainWindow);
 }
 
 void Framework::run(Application * app)
