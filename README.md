@@ -1,4 +1,4 @@
-# Sphere Meshes Approximation
+# Sphere Mesh Approximation
 This is an implementation of the approximation algorithm proposed by *Thiery*, *Guy* and *Boubekeur* in their paper [Sphere-Meshes: Shape Approximation using Spherical Quadric Error Metrics](https://dl.acm.org/doi/10.1145/2508363.2508384). It uses the so called *Spherical Quadric Error Metric* to iteratively collapse edges of the mesh thus creating a simplified version of the original model.
 
 ![Sphere mesh approximation of the stanford bunny.](doc/bunny.png)
